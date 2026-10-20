@@ -105,7 +105,7 @@ Sidebar navigation:
    - Focus, short-break and long-break lengths, and the number of cycles before a long break.
    - Auto-start next phase (on or off), and sounds.
    - White noise settings (see 3.4).
-5. **Settings**
+5. **Settings** (the standard macOS Settings window, opened with ⌘, from the popover or the app menu)
    - General: launch at login, the "save activity?" default, first day of week.
    - Menu Bar: what the menu bar item shows (see 3.5).
    - Appearance: theme, style and accent color (see 3.6).
@@ -308,14 +308,20 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 - [x] `git init` (on `main`), a Swift/Xcode `.gitignore`, a README, and a `LICENSE` (MIT).
 
 ### Phase 1: MVP tracker (the core loop)
-- [ ] SwiftData models plus `TimerEngine` (start, pause, resume, stop), with unit tests for the duration math.
-- [ ] Basic theme layer (`AppTheme` with Glass and Solid), so every view is themeable from day one.
-- [ ] Menu bar label with live elapsed time.
-- [ ] Popover with a name field and autocomplete, start, pause and stop, and today's total.
-- [ ] The "Save as activity?" prompt and the setting for its default.
-- [ ] Recent-activity chips for one-click restart.
-- [ ] Restore a running timer after quit or relaunch.
+- [x] SwiftData models plus `TimerEngine` (start, pause, resume, stop, and pauses recorded as breaks), with unit tests (16 passing).
+- [x] Basic theme layer (`AppTheme` with Glass and Solid, plus Light, Dark and System mode), so every view is themeable from day one.
+- [x] Menu bar label with live elapsed time and a pause glyph when paused.
+- [x] Popover with:
+  - a name field with autocomplete (↑/↓ to pick, Return to start).
+  - pause/resume (Space) and stop (⌘.).
+  - today's total, and footer buttons for open app (⌘O), Settings (⌘,) and Quit (⌘Q).
+- [x] The "Save as activity?" prompt, and the default setting for it (Settings → General). Saving also claims earlier unsaved entries with the same name.
+- [x] Recent-activity chips for one-click restart.
+- [x] Restore a running timer after quit, a crash or a relaunch. This was verified with a hard kill.
+- [x] Minimal Settings window (⌘,) with General (save-activity default) and Appearance (mode and style).
 - **Exit criteria:** usable daily for basic tracking.
+
+> **Deviation:** Settings uses the standard macOS Settings window (⌘,) rather than a sidebar item in the main window. This is more native and keeps the main window focused on data.
 
 ### Phase 2: Full app window
 - [ ] Window scene with sidebar navigation, opened from the popover.
