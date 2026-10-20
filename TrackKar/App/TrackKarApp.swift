@@ -7,6 +7,7 @@ struct TrackKarApp: App {
     private let container: ModelContainer
     @State private var engine: TimerEngine
     @State private var widthLock = StatusItemWidthLock()
+    @State private var navigation = AppNavigation()
     @AppStorage(PreferenceKey.menuBarOptions) private var menuBarOptions = MenuBarOptions()
 
     init() {
@@ -34,6 +35,7 @@ struct TrackKarApp: App {
         MenuBarExtra(isInserted: isMenuBarItemShown) {
             PopoverView(widthLock: widthLock)
                 .environment(engine)
+                .environment(navigation)
         } label: {
             MenuBarLabel(engine: engine, options: menuBarOptions, widthLock: widthLock)
         }
@@ -43,16 +45,19 @@ struct TrackKarApp: App {
         Window("Track Kar", id: WindowID.main) {
             MainWindowView()
                 .environment(engine)
+                .environment(navigation)
                 .themedRoot()
         }
         .defaultSize(width: 980, height: 640)
         .defaultLaunchBehavior(.suppressed)
         .modelContainer(container)
-
-        Settings {
-            SettingsView()
-                .environment(engine)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                SettingsCommand(navigation: navigation)
+            }
         }
+
+
     }
 
     /// Hidden only when the user chose "Hidden" for idle and nothing is being tracked.

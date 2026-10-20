@@ -105,7 +105,7 @@ Sidebar navigation:
    - Focus, short-break and long-break lengths, and the number of cycles before a long break.
    - Auto-start next phase (on or off), and sounds.
    - White noise settings (see 3.4).
-5. **Settings** (the standard macOS Settings window, opened with ⌘, from the popover or the app menu)
+5. **Settings** (a sidebar page with General, Timers, Menu Bar and Appearance sections; ⌘, opens it)
    - General: launch at login, the "save activity?" default, first day of week.
    - Menu Bar: what the menu bar item shows (see 3.5).
    - Appearance: theme, style and accent color (see 3.6).
@@ -321,7 +321,7 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 - [x] Minimal Settings window (⌘,) with General (save-activity default) and Appearance (mode and style).
 - **Exit criteria:** usable daily for basic tracking.
 
-> **Deviation:** Settings uses the standard macOS Settings window (⌘,) rather than a sidebar item in the main window. This is more native and keeps the main window focused on data.
+> **Settings location:** Phase 1 used the standard macOS Settings window. As of 2026-10-20, Settings is a **sidebar page in the main window** (General · Timers · Menu Bar · Appearance). ⌘, opens it from the app menu, and the Pomodoro "Change…" link opens the Timers section. The popover has no Settings button, to keep it minimal.
 
 ### Phase 2: Full app window
 - [x] Window scene with sidebar navigation (History, Activities, Groups), opened from the popover (⌘O).
@@ -418,6 +418,7 @@ Postponed on 2026-10-20 and moved to the backlog. Phase 5 is next.
 | 2026-10-20 | Groups are assigned **only in the full app**. The popover stays minimal. |
 | 2026-10-20 | **No Apple Intelligence features** for now. |
 | 2026-10-20 | **White noise is deferred** to the backlog. |
+| 2026-10-20 | **Settings lives in the main window** (a sidebar page) instead of a separate Settings window. |
 | 2026-10-20 | The app supports **themes**: Light, Dark or System mode × **Liquid Glass** or **Solid** style, plus an accent color. All UI goes through a theme layer. |
 
 ---

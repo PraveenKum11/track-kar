@@ -7,7 +7,7 @@ struct PopoverView: View {
 
     @Environment(TimerEngine.self) private var engine
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
+    @Environment(AppNavigation.self) private var navigation
     @AppStorage(PreferenceKey.newActivityBehavior) private var newActivityBehavior: NewActivityBehavior = .ask
     @AppStorage(PreferenceKey.selectedTimerMode) private var selectedMode: TimerMode = .stopwatch
     @AppStorage(PreferenceKey.countdownMinutes) private var countdownMinutes = 25
@@ -40,7 +40,7 @@ struct PopoverView: View {
             } else {
                 nameField
                 TimerModePicker(mode: $selectedMode, countdownMinutes: $countdownMinutes) {
-                    AppActivation.showSettings(openSettings)
+                    navigation.showSettings(.timers, using: openWindow)
                 }
                 if let prompt = engine.savePromptEntry {
                     SavePromptBanner(title: prompt.title)
@@ -101,14 +101,6 @@ struct PopoverView: View {
                 }
                 .keyboardShortcut("o")
                 .help("Open Track Kar (⌘O)")
-
-                Button {
-                    AppActivation.showSettings(openSettings)
-                } label: {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .keyboardShortcut(",")
-                .help("Settings (⌘,)")
 
                 Button {
                     NSApp.terminate(nil)

@@ -1,24 +1,33 @@
 import SwiftUI
 
-/// The standard macOS Settings window (⌘,).
+/// Settings, shown as a page in the main window (⌘, opens it).
 struct SettingsView: View {
+    @Environment(AppNavigation.self) private var navigation
+
     var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") {
-                GeneralSettingsView()
+        @Bindable var navigation = navigation
+        VStack(spacing: 0) {
+            Picker("Section", selection: $navigation.settingsTab) {
+                ForEach(SettingsTab.allCases) { Text($0.label).tag($0) }
             }
-            Tab("Timers", systemImage: "timer") {
-                TimerSettingsView()
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .padding(.top, 12)
+
+            Group {
+                switch navigation.settingsTab {
+                case .general: GeneralSettingsView()
+                case .timers: TimerSettingsView()
+                case .menuBar: MenuBarSettingsView()
+                case .appearance: AppearanceSettingsView()
+                }
             }
-            Tab("Menu Bar", systemImage: "menubar.rectangle") {
-                MenuBarSettingsView()
-            }
-            Tab("Appearance", systemImage: "paintpalette") {
-                AppearanceSettingsView()
-            }
+            // Forms read best at a comfortable width rather than stretched across the window.
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
-        .frame(width: 520)
-        .themedRoot()
+        .navigationTitle("Settings")
     }
 }
 
@@ -91,7 +100,6 @@ private struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 520)
     }
 }
 

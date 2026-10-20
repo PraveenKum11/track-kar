@@ -10,11 +10,6 @@ enum AppActivation {
         bringToFront()
     }
 
-    static func showSettings(_ openSettings: OpenSettingsAction) {
-        openSettings()
-        bringToFront()
-    }
-
     /// Activation right after a policy change is ignored, so wait one runloop pass. Cooperative
     /// `activate()` leaves the window behind the previously active app when invoked from the
     /// menu bar panel, so this asks to take focus explicitly.

@@ -41,7 +41,6 @@ struct TimerSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 560)
         .onChange(of: settings) {
             engine.timerSettingsChanged()
         }

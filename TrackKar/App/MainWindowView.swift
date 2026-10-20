@@ -1,20 +1,14 @@
 import SwiftData
 import SwiftUI
 
-enum SidebarItem: Hashable {
-    case history
-    case activities
-    case group(PersistentIdentifier)
-}
-
 /// The full app window: sidebar navigation plus a timer control in the toolbar.
 struct MainWindowView: View {
     @Environment(\.modelContext) private var context
     @Environment(TimerEngine.self) private var engine
+    @Environment(AppNavigation.self) private var navigation
     @Query(filter: #Predicate<ActivityGroup> { !$0.isArchived }, sort: \ActivityGroup.name)
     private var groups: [ActivityGroup]
 
-    @State private var selection: SidebarItem? = .history
     @State private var groupEditor: GroupEditorSheet.Target?
     @State private var groupToDelete: ActivityGroup?
 
@@ -31,7 +25,7 @@ struct MainWindowView: View {
         }
         .sheet(item: $groupEditor) { target in
             GroupEditorSheet(target: target) { group in
-                selection = .group(group.persistentModelID)
+                navigation.selection = .group(group.persistentModelID)
             }
         }
         .confirmationDialog(
@@ -40,7 +34,7 @@ struct MainWindowView: View {
             presenting: groupToDelete
         ) { group in
             Button("Delete Group", role: .destructive) {
-                if selection == .group(group.persistentModelID) { selection = .activities }
+                if navigation.selection == .group(group.persistentModelID) { navigation.selection = .activities }
                 EntryEditing.delete(group, in: context)
                 engine.saveChanges()
             }
@@ -59,7 +53,8 @@ struct MainWindowView: View {
     }
 
     private var sidebar: some View {
-        List(selection: $selection) {
+        @Bindable var navigation = navigation
+        return List(selection: $navigation.selection) {
             Section {
                 Label("History", systemImage: "clock.arrow.circlepath")
                     .tag(SidebarItem.history)
@@ -85,6 +80,11 @@ struct MainWindowView: View {
                     }
                 }
             }
+
+            Section {
+                Label("Settings", systemImage: "gearshape")
+                    .tag(SidebarItem.settings)
+            }
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 210)
         .safeAreaInset(edge: .bottom) {
@@ -101,7 +101,7 @@ struct MainWindowView: View {
 
     @ViewBuilder
     private var detail: some View {
-        switch selection {
+        switch navigation.selection {
         case .history, nil:
             HistoryView()
         case .activities:
@@ -112,6 +112,8 @@ struct MainWindowView: View {
             } else {
                 ContentUnavailableView("No Group Selected", systemImage: "folder")
             }
+        case .settings:
+            SettingsView()
         }
     }
 

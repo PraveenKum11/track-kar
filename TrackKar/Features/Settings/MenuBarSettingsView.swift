@@ -78,7 +78,6 @@ struct MenuBarSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 640)
     }
 
     private var preview: some View {
