@@ -7,7 +7,9 @@ struct LaunchAtLoginToggle: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        Toggle(isOn: Binding(get: { isEnabled }, set: setEnabled)) {
+        // A closure literal rather than `set: setEnabled`: Swift 6.3 crashes generating the
+        // thunk for that method reference (seen on CI's Xcode 26.6).
+        Toggle(isOn: Binding(get: { isEnabled }, set: { setEnabled($0) })) {
             Text("Launch at login")
             if let errorMessage {
                 Text(errorMessage)
