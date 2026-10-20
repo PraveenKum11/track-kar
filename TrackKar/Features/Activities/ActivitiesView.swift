@@ -19,11 +19,13 @@ struct ActivitiesView: View {
     private enum Confirmation: Identifiable {
         case delete(Activity)
         case merge(Activity, into: Activity)
+        case switchTo(Activity)
 
         var id: String {
             switch self {
             case .delete(let activity): "delete-\(activity.id)"
             case .merge(let source, let target): "merge-\(source.id)-\(target.id)"
+            case .switchTo(let activity): "switch-\(activity.id)"
             }
         }
     }
@@ -145,6 +147,10 @@ struct ActivitiesView: View {
                     EntryEditing.merge(source, into: target, in: context)
                     engine.saveChanges()
                 }
+            case .switchTo(let activity):
+                Button("Save and Switch") { switchTimer(to: activity, choice: .saveAndSwitch) }
+                Button("Move This Time to “\(activity.name)”") { switchTimer(to: activity, choice: .moveTime) }
+                Button("Discard and Switch", role: .destructive) { switchTimer(to: activity, choice: .discard) }
             }
         } message: { confirmation in
             switch confirmation {
@@ -152,6 +158,10 @@ struct ActivitiesView: View {
                 Text("Its entries stay in History as unsaved entries.")
             case .merge(let source, let target):
                 Text("All of “\(source.name)”'s entries move to “\(target.name)”, and “\(source.name)” is deleted.")
+            case .switchTo:
+                if let current = engine.activeEntry {
+                    Text("“\(current.displayName)” has \(DurationFormat.clock(engine.elapsed)) tracked.")
+                }
             }
         }
         .navigationTitle("Activities")
@@ -161,6 +171,7 @@ struct ActivitiesView: View {
         switch confirmation {
         case .delete(let activity): String(localized: "Delete “\(activity.name)”?")
         case .merge(let source, let target): String(localized: "Merge “\(source.name)” into “\(target.name)”?")
+        case .switchTo(let activity): String(localized: "Switch to “\(activity.name)”?")
         case nil: ""
         }
     }
@@ -183,8 +194,14 @@ struct ActivitiesView: View {
 
     @ViewBuilder
     private func contextMenu(for activity: Activity) -> some View {
-        Button("Start Timer") { engine.start(activity: activity) }
-            .disabled(activity.isArchived)
+        Button("Start Timer") {
+            if engine.needsSwitchConfirmation(for: .activity(activity)) {
+                confirmation = .switchTo(activity)
+            } else if engine.state == .idle {
+                engine.start(activity: activity)
+            }
+        }
+        .disabled(activity.isArchived || engine.activeEntry?.activity == activity)
         Button("Edit…") { editor = .edit(activity) }
 
         Menu("Move to Group") {
@@ -210,6 +227,10 @@ struct ActivitiesView: View {
             engine.saveChanges()
         }
         Button("Delete…", role: .destructive) { confirmation = .delete(activity) }
+    }
+
+    private func switchTimer(to activity: Activity, choice: SwitchChoice) {
+        engine.switchActiveEntry(to: .activity(activity), choice: choice, newActivityBehavior: .ask)
     }
 
     private func setGroup(_ group: ActivityGroup?, for activity: Activity) {

@@ -3,6 +3,8 @@ import SwiftUI
 
 /// One-click restart for the last few activities.
 struct RecentChips: View {
+    let onSelect: (Activity) -> Void
+
     @Environment(TimerEngine.self) private var engine
     @Environment(\.appTheme) private var theme
     @Query(Self.recentEntries) private var entries: [TimeEntry]
@@ -29,7 +31,7 @@ struct RecentChips: View {
                 FlowLayout(spacing: 6) {
                     ForEach(activities) { activity in
                         Button {
-                            engine.start(activity: activity)
+                            onSelect(activity)
                         } label: {
                             HStack(spacing: 5) {
                                 Circle()

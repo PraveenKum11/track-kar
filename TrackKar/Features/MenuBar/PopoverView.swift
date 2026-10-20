@@ -8,6 +8,7 @@ struct PopoverView: View {
     @AppStorage(PreferenceKey.newActivityBehavior) private var newActivityBehavior: NewActivityBehavior = .ask
 
     @State private var name = ""
+    @State private var pendingSwitch: StartTarget?
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
@@ -19,11 +20,11 @@ struct PopoverView: View {
                     placeholder: engine.state == .idle
                         ? String(localized: "What are you working on?")
                         : String(localized: "Switch to something else…"),
-                    onSubmit: start
+                    onSubmit: submit
                 )
                 if engine.state == .idle {
                     Button {
-                        start(.title(name))
+                        start(StartTarget.title(name))
                     } label: {
                         Label("Start", systemImage: "play.fill")
                             .labelStyle(.iconOnly)
@@ -35,14 +36,21 @@ struct PopoverView: View {
             }
 
             if let entry = engine.activeEntry {
-                ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused)
+                ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused && pendingSwitch == nil)
             }
 
-            if let entry = engine.savePromptEntry {
+            if let target = pendingSwitch, let entry = engine.activeEntry {
+                SwitchConfirmation(current: entry, target: target) { choice in
+                    if let choice {
+                        engine.switchActiveEntry(to: target, choice: choice, newActivityBehavior: newActivityBehavior)
+                    }
+                    pendingSwitch = nil
+                }
+            } else if let entry = engine.savePromptEntry {
                 SavePromptBanner(title: entry.title)
             }
 
-            RecentChips()
+            RecentChips { start(.activity($0)) }
 
             Divider()
 
@@ -91,12 +99,22 @@ struct PopoverView: View {
         .buttonStyle(.borderless)
     }
 
-    private func start(_ submission: NameField.Submission) {
-        switch submission {
-        case .activity(let activity):
-            engine.start(activity: activity)
-        case .title(let title):
-            engine.start(title: title, newActivityBehavior: newActivityBehavior)
+    private func submit(_ submission: NameField.Submission) {
+        let target: StartTarget = switch submission {
+        case .activity(let activity): .activity(activity)
+        case .title(let title): .title(title)
+        }
+        start(target)
+    }
+
+    /// Starts right away when idle; otherwise asks what to do with the running entry.
+    private func start(_ target: StartTarget) {
+        if engine.state == .idle {
+            engine.start(target, newActivityBehavior: newActivityBehavior)
+        } else if case .title(let title) = target, title.nilIfBlank == nil {
+            // Return in an empty field while tracking does nothing.
+        } else if engine.needsSwitchConfirmation(for: target) {
+            pendingSwitch = target
         }
         name = ""
         isNameFocused = false

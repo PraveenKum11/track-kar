@@ -7,6 +7,29 @@ enum TrackingState: Equatable {
     case idle, running, paused
 }
 
+/// Something to start tracking: a saved activity or a typed name.
+enum StartTarget: Equatable {
+    case activity(Activity)
+    case title(String)
+
+    var displayName: String {
+        switch self {
+        case .activity(let activity): activity.name
+        case .title(let title): title.nilIfBlank ?? String(localized: "Untitled")
+        }
+    }
+}
+
+/// What to do with the running entry when starting something else.
+enum SwitchChoice {
+    /// Keep the current entry in History and start a new one.
+    case saveAndSwitch
+    /// Keep the timer running, but count its time toward the new target.
+    case moveTime
+    /// Delete the current entry and start a new one.
+    case discard
+}
+
 /// The single source of truth for the active time entry. Only this type mutates active entries.
 ///
 /// Time is stored as segment timestamps and recomputed on demand, so a running timer survives sleep,
@@ -68,6 +91,72 @@ final class TimerEngine {
         stop()
         beginEntry(title: activity.name, activity: activity)
         savePromptEntry = nil
+        commit()
+    }
+
+    func start(_ target: StartTarget, newActivityBehavior: NewActivityBehavior) {
+        switch target {
+        case .activity(let activity): start(activity: activity)
+        case .title(let title): start(title: title, newActivityBehavior: newActivityBehavior)
+        }
+    }
+
+    /// Starting `target` would end a running or paused entry, so the user should choose what
+    /// happens to it. Re-selecting what's already being tracked isn't a switch.
+    func needsSwitchConfirmation(for target: StartTarget) -> Bool {
+        guard let entry = activeEntry else { return false }
+        switch target {
+        case .activity(let activity):
+            return entry.activity != activity
+        case .title(let title):
+            let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.localizedCaseInsensitiveCompare(entry.displayName) != .orderedSame
+        }
+    }
+
+    func switchActiveEntry(to target: StartTarget, choice: SwitchChoice, newActivityBehavior: NewActivityBehavior) {
+        switch choice {
+        case .saveAndSwitch:
+            start(target, newActivityBehavior: newActivityBehavior)
+        case .discard:
+            discardActiveEntry()
+            start(target, newActivityBehavior: newActivityBehavior)
+        case .moveTime:
+            moveActiveEntry(to: target, newActivityBehavior: newActivityBehavior)
+        }
+    }
+
+    /// Deletes the running or paused entry without saving it.
+    func discardActiveEntry() {
+        guard let entry = activeEntry else { return }
+        activeEntry = nil
+        if entry == savePromptEntry { savePromptEntry = nil }
+        context.delete(entry)
+        commit()
+    }
+
+    /// Re-labels the running entry; its time so far now counts toward `target`.
+    func moveActiveEntry(to target: StartTarget, newActivityBehavior: NewActivityBehavior) {
+        guard let entry = activeEntry else { return }
+        savePromptEntry = nil
+        switch target {
+        case .activity(let activity):
+            EntryEditing.assign(entry, to: activity, title: activity.name)
+        case .title(let title):
+            let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !title.isEmpty, let activity = ActivityLookup.activity(named: title, in: context) {
+                EntryEditing.assign(entry, to: activity, title: activity.name)
+            } else {
+                EntryEditing.assign(entry, to: nil, title: title)
+                if !title.isEmpty {
+                    switch newActivityBehavior {
+                    case .ask: savePromptEntry = entry
+                    case .alwaysSave: ActivityLookup.promote(title: title, in: context, at: clock())
+                    case .neverSave: break
+                    }
+                }
+            }
+        }
         commit()
     }
 

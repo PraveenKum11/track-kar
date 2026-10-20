@@ -86,6 +86,7 @@ struct MenuBarSettingsView: View {
             Image(systemName: "wifi")
             Image(systemName: "battery.75percent")
             MenuBarLabelContent(content: content, fixedWidth: options.fixedWidth)
+                .environment(\.colorScheme, .dark)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(.white.opacity(0.15), in: .rect(cornerRadius: 4))

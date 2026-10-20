@@ -22,63 +22,54 @@ struct MenuBarLabel: View {
     }
 }
 
-/// Renders a `MenuBarContent`. Shared by the real status item and the Settings preview.
+/// Renders a `MenuBarContent` as a single image. Shared by the real status item and the Settings preview.
+///
+/// Status items flatten SwiftUI labels: they ignore opacity, monospaced digits and colors, and
+/// show one image at most. Drawing everything into one image keeps digits fixed-width (so the
+/// item, and the popover anchored to it, don't shift as time changes), allows dimming, and
+/// keeps the color dot's color.
 struct MenuBarLabelContent: View {
     let content: MenuBarContent
     let fixedWidth: Bool
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        if content.isDimmed {
-            Image(nsImage: dimmedImage)
-        } else {
-            HStack(spacing: 4) {
-                if let colorHex = content.colorHex {
-                    Image(nsImage: Self.dot(hex: colorHex))
-                }
-                if let symbolName = content.symbolName {
-                    Image(systemName: symbolName)
-                }
-                if let text = content.text {
-                    Text(text)
-                        .monospacedDigit(fixedWidth)
-                }
-            }
-        }
+        Image(nsImage: rendered)
+            .accessibilityLabel([content.text].compactMap { $0 }.joined())
     }
 
-    /// Status items draw labels as templates and ignore opacity, but a template image keeps its
-    /// alpha, so the dimmed label is rendered into one at reduced alpha.
-    private var dimmedImage: NSImage {
-        let renderer = ImageRenderer(content:
-            HStack(spacing: 4) {
-                if let symbolName = content.symbolName {
-                    Image(systemName: symbolName)
-                }
-                if let text = content.text {
-                    Text(text)
-                        .monospacedDigit(fixedWidth)
-                }
-            }
-            .font(Font(NSFont.menuBarFont(ofSize: 0)))
-            .foregroundStyle(.black.opacity(0.45))
-        )
+    private var rendered: NSImage {
+        // Without a color dot the image is a template, so the system tints it to match the
+        // menu bar. With one, it must keep its colors, so the text ink follows the appearance.
+        let isTemplate = content.colorHex == nil
+        let ink: Color = isTemplate || colorScheme == .light ? .black : .white
+        let renderer = ImageRenderer(content: drawing(ink: ink))
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
         let image = renderer.nsImage ?? NSImage()
-        image.isTemplate = true
+        image.isTemplate = isTemplate
         return image
     }
 
-    /// Status items render SwiftUI shapes as monochrome templates, so the color dot is a
-    /// non-template bitmap to keep its color. The label shows one image at most.
-    private static func dot(hex: String) -> NSImage {
-        let size = NSSize(width: 10, height: 10)
-        let image = NSImage(size: size, flipped: false) { rect in
-            (NSColor(hex: hex) ?? .gray).setFill()
-            NSBezierPath(ovalIn: rect).fill()
-            return true
+    private func drawing(ink: Color) -> some View {
+        HStack(spacing: 4) {
+            if let colorHex = content.colorHex {
+                Circle()
+                    .fill(Color(hex: colorHex))
+                    .frame(width: 9, height: 9)
+            }
+            if let symbolName = content.symbolName {
+                Image(systemName: symbolName)
+            }
+            if let text = content.text {
+                Text(text)
+                    .monospacedDigit(fixedWidth)
+            }
         }
-        image.isTemplate = false
-        return image
+        .font(Font(NSFont.menuBarFont(ofSize: 0)))
+        .foregroundStyle(ink)
+        .opacity(content.isDimmed ? 0.45 : 1)
+        .fixedSize()
     }
 }
 

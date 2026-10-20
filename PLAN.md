@@ -346,6 +346,8 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 > **Notes from building Phase 2:**
 > - **One image per label.** A status item label renders a single image plus text, so the color dot takes the icon's place (the pause glyph wins while paused).
 > - **Dimming.** Opacity is ignored in the menu bar, so the dimmed paused style is drawn as a reduced-alpha template image.
+> - **Switching guard.** Starting something else while a timer is running or paused never ends it silently. The user chooses: *Save and switch*, *Move this time* (re-label the running entry and keep it going), *Discard and switch*, or Cancel. This applies to the popover (name field and chips) and Activities → Start Timer.
+> - **Stable menu bar width.** The status item label is drawn as a single image so its digits are truly fixed-width. Otherwise the item resized as the time changed, and the popover, which is anchored to it, slid sideways.
 
 ### Phase 3: Timer modes and Pomodoro
 - [ ] Countdown timer with presets, a notification and sound, and an overtime option.
