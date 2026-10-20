@@ -153,3 +153,11 @@ extension String {
         return trimmed.isEmpty ? nil : trimmed
     }
 }
+
+extension String {
+    /// Localizes and applies grammar agreement, so `^[2 break](inflect: true)` becomes "2 breaks".
+    /// Plain `String(localized:)` leaves that markup as-is; only `Text` and `AttributedString` apply it.
+    static func inflected(_ resource: LocalizedStringResource) -> String {
+        String(AttributedString(localized: resource).characters)
+    }
+}

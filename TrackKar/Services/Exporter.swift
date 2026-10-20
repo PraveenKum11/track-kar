@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -149,6 +150,42 @@ struct ExportFile: Codable, Equatable {
     var groups: [Group]
     var activities: [Activity]
     var entries: [Entry]
+}
+
+/// A ready-to-save export: what `fileExporter` needs.
+struct PreparedExport {
+    var document: ExportDocument
+    var format: ExportFormat
+    var filename: String
+
+    /// Builds an export of entries overlapping `interval`, or everything when it's nil.
+    static func make(_ format: ExportFormat, in interval: DateInterval?, context: ModelContext, now: Date = .now) throws -> PreparedExport {
+        var descriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.createdAt)])
+        if let interval {
+            let start = interval.start
+            let end = interval.end
+            let openEnded = Date.distantFuture
+            descriptor.predicate = #Predicate { $0.createdAt < end && ($0.endedAt ?? openEnded) > start }
+        }
+        let entries = try context.fetch(descriptor)
+        let data: Data
+        switch format {
+        case .csv:
+            data = Data(Exporter.csv(entries, at: now).utf8)
+        case .json:
+            data = try Exporter.json(
+                entries,
+                activities: try context.fetch(FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.name)])),
+                groups: try context.fetch(FetchDescriptor<ActivityGroup>(sortBy: [SortDescriptor(\.name)])),
+                at: now
+            )
+        }
+        let day = DateFormatter()
+        day.dateFormat = "yyyy-MM-dd"
+        let suffix = interval.map { "\(day.string(from: $0.start)) to \(day.string(from: $0.end.addingTimeInterval(-1)))" }
+            ?? "All \(day.string(from: now))"
+        return PreparedExport(document: ExportDocument(data: data), format: format, filename: "Track Kar \(suffix)")
+    }
 }
 
 /// Wraps export bytes for `fileExporter`.

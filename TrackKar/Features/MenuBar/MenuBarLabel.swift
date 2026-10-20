@@ -60,7 +60,7 @@ struct MenuBarLabelContent: View {
             DispatchQueue.main.async { onRender(width) }
         }
         return Image(nsImage: Self.padded(image, toWidth: minimumWidth))
-            .accessibilityLabel([content.text].compactMap { $0 }.joined())
+            .accessibilityLabel(content.text.map { "Track Kar, \($0)" } ?? "Track Kar")
     }
 
     static func render(_ content: MenuBarContent, fixedWidth: Bool, colorScheme: ColorScheme) -> NSImage {

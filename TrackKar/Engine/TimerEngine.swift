@@ -56,6 +56,8 @@ final class TimerEngine {
     private(set) var now: Date
     /// The entry whose "Save as activity?" question is waiting for an answer.
     private(set) var savePromptEntry: TimeEntry?
+    /// Time away from the Mac waiting for the user to keep or remove it.
+    private(set) var pendingAway: AwayInterval?
 
     @ObservationIgnored private let context: ModelContext
     @ObservationIgnored private let clock: () -> Date
@@ -63,6 +65,7 @@ final class TimerEngine {
     @ObservationIgnored private let notifier: TimerNotifying
     @ObservationIgnored private let ticks: Bool
     @ObservationIgnored private var tickTask: Task<Void, Never>?
+    @ObservationIgnored private var reminderDate: Date?
     @ObservationIgnored private let logger = Logger(subsystem: "com.praveenkumar.TrackKar", category: "TimerEngine")
 
     init(
@@ -155,6 +158,27 @@ final class TimerEngine {
         switch target {
         case .activity(let activity): start(activity: activity, kind: kind)
         case .title(let title): start(title: title, kind: kind, newActivityBehavior: newActivityBehavior)
+        }
+    }
+
+    /// Starts the most recently tracked activity or name again, in the same mode. Untitled when
+    /// nothing has been tracked yet.
+    func restartMostRecent(newActivityBehavior: NewActivityBehavior) {
+        var descriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        descriptor.fetchLimit = 1
+        guard let last = (try? context.fetch(descriptor))?.first else {
+            start(title: "", newActivityBehavior: newActivityBehavior)
+            return
+        }
+        let kind: TimerKind = switch last.mode {
+        case .stopwatch: .stopwatch
+        case .timer: .countdown(last.targetDuration ?? 25 * 60)
+        case .pomodoro: .pomodoro
+        }
+        if let activity = last.activity, !activity.isArchived {
+            start(activity: activity, kind: kind)
+        } else {
+            start(title: last.title, kind: kind, newActivityBehavior: newActivityBehavior)
         }
     }
 
@@ -276,6 +300,44 @@ final class TimerEngine {
         commit()
     }
 
+    // MARK: - Time away
+
+    /// Records time away (sleep or idle) while the timer ran, for the user to resolve.
+    func reportAway(_ interval: AwayInterval) {
+        guard state == .running, interval.duration > 0 else { return }
+        // Several reports before an answer (idle, then sleep) merge into one stretch.
+        if let pending = pendingAway {
+            pendingAway = AwayInterval(start: min(pending.start, interval.start), end: max(pending.end, interval.end))
+        } else {
+            pendingAway = interval
+        }
+    }
+
+    func resolveAway(_ choice: AwayChoice) {
+        guard let away = pendingAway else { return }
+        pendingAway = nil
+        guard choice != .keep, let entry = activeEntry, let segment = entry.openSegment else {
+            commit()
+            return
+        }
+        // Only time inside the current run can be removed.
+        let start = max(away.start, segment.start)
+        let time = clock()
+        guard start < time else { return }
+        segment.end = start
+        let gap = Break(kind: .away, start: start)
+        context.insert(gap)
+        gap.entry = entry
+        if choice == .discard {
+            let back = min(max(away.end, start), time)
+            gap.end = back
+            let resumed = Segment(start: back)
+            context.insert(resumed)
+            resumed.entry = entry
+        }
+        commit()
+    }
+
     func togglePause() {
         switch state {
         case .running: pause()
@@ -285,6 +347,7 @@ final class TimerEngine {
     }
 
     func stop() {
+        pendingAway = nil
         guard let entry = activeEntry else { return }
         close(entry, at: clock())
         activeEntry = nil
@@ -307,6 +370,25 @@ final class TimerEngine {
         for entry in entries where entry != activeEntry {
             if entry == savePromptEntry { savePromptEntry = nil }
             context.delete(entry)
+        }
+        commit()
+    }
+
+    /// Deletes every entry, activity and group, including a running timer. Settings are kept.
+    func eraseAllData() {
+        tickTask?.cancel()
+        tickTask = nil
+        activeEntry = nil
+        savePromptEntry = nil
+        pendingAway = nil
+        do {
+            try context.delete(model: Break.self)
+            try context.delete(model: Segment.self)
+            try context.delete(model: TimeEntry.self)
+            try context.delete(model: Activity.self)
+            try context.delete(model: ActivityGroup.self)
+        } catch {
+            logger.error("Erasing failed: \(error.localizedDescription, privacy: .public)")
         }
         commit()
     }
@@ -509,6 +591,28 @@ final class TimerEngine {
         save()
         updateTicker()
         notifier.schedule(nextAlert())
+        scheduleReminder()
+    }
+
+    /// "Still tracking?" after every N hours of a running stopwatch.
+    private func scheduleReminder() {
+        let hours = settings().stillTrackingHours
+        guard hours > 0, let entry = activeEntry, entry.mode == .stopwatch, entry.isRunning else {
+            reminderDate = nil
+            notifier.scheduleReminder(nil)
+            return
+        }
+        let time = clock()
+        let every = TimeInterval(hours * 3_600)
+        let tracked = entry.duration(at: time)
+        let milestone = ((tracked / every).rounded(.down) + 1) * every
+        let date = time.addingTimeInterval(milestone - tracked)
+        reminderDate = date
+        notifier.scheduleReminder(TimerAlert(
+            date: date,
+            title: String(localized: "Still tracking?"),
+            body: String(localized: "“\(entry.displayName)” has been running for \(DurationFormat.short(milestone)).")
+        ))
     }
 
     private func save() {
@@ -532,6 +636,10 @@ final class TimerEngine {
                     guard let self else { return }
                     self.now = self.clock()
                     self.advanceTimers()
+                    // Line up the next reminder once one has fired.
+                    if let reminderDate = self.reminderDate, self.now >= reminderDate {
+                        self.scheduleReminder()
+                    }
                 }
             }
         } else {

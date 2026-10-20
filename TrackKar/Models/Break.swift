@@ -2,7 +2,8 @@ import Foundation
 import SwiftData
 
 enum BreakKind: String, Codable {
-    case pause, shortBreak, longBreak
+    /// A manual pause, a Pomodoro break, or time away from the Mac that the user chose not to count.
+    case pause, shortBreak, longBreak, away
 }
 
 /// A pause or Pomodoro break. Counted for stats, never added to tracked time.

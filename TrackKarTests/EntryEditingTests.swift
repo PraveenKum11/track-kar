@@ -183,3 +183,43 @@ struct EntryEditingTests {
         #expect(try context.fetch(FetchDescriptor<Activity>()) == [dsa])
     }
 }
+
+@MainActor
+struct EraseTests {
+    let container = Persistence.makeContainer(inMemory: true)
+    let clock = TestClock()
+    let engine: TimerEngine
+
+    var context: ModelContext { container.mainContext }
+
+    init() {
+        engine = TimerEngine(context: container.mainContext, clock: { [clock] in clock.date }, ticks: false)
+    }
+
+    @Test func erasingRemovesEverythingIncludingTheRunningTimer() throws {
+        let group = ActivityGroup(name: "Prep")
+        context.insert(group)
+        let dsa = try EntryEditing.createActivity(name: "DSA", colorHex: nil, group: group, in: context)
+        engine.start(activity: dsa)
+        clock.advance(600)
+        engine.pause()
+        clock.advance(60)
+        engine.resume()
+        engine.start(title: "Errands", newActivityBehavior: .ask)
+
+        engine.eraseAllData()
+
+        #expect(engine.state == .idle)
+        #expect(engine.activeEntry == nil)
+        #expect(engine.savePromptEntry == nil)
+        #expect(try context.fetchCount(FetchDescriptor<TimeEntry>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<Segment>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<Break>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<Activity>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<ActivityGroup>()) == 0)
+
+        // Tracking works normally afterwards.
+        engine.start(title: "Fresh start", newActivityBehavior: .neverSave)
+        #expect(engine.state == .running)
+    }
+}

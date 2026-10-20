@@ -10,14 +10,8 @@ struct DashboardView: View {
     @AppStorage(PreferenceKey.dashboardGrouping) private var grouping: BreakdownGrouping = .activity
 
     @State private var range = DashboardRange()
-    @State private var pendingExport: PendingExport?
+    @State private var pendingExport: PreparedExport?
     @State private var exportError: String?
-
-    private struct PendingExport {
-        var document: ExportDocument
-        var format: ExportFormat
-        var filename: String
-    }
 
     var body: some View {
         let calendar = firstWeekday.calendar
@@ -129,37 +123,8 @@ struct DashboardView: View {
 
     /// Exports entries overlapping `interval`, or everything when it's nil.
     private func export(_ format: ExportFormat, in interval: DateInterval?, calendar: Calendar) {
-        let now = Date.now
-        var descriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.createdAt)])
-        if let interval {
-            let start = interval.start
-            let end = interval.end
-            let openEnded = Date.distantFuture
-            descriptor.predicate = #Predicate { $0.createdAt < end && ($0.endedAt ?? openEnded) > start }
-        }
         do {
-            let entries = try context.fetch(descriptor)
-            let data: Data
-            switch format {
-            case .csv:
-                data = Data(Exporter.csv(entries, at: now).utf8)
-            case .json:
-                data = try Exporter.json(
-                    entries,
-                    activities: try context.fetch(FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.name)])),
-                    groups: try context.fetch(FetchDescriptor<ActivityGroup>(sortBy: [SortDescriptor(\.name)])),
-                    at: now
-                )
-            }
-            let day = DateFormatter()
-            day.dateFormat = "yyyy-MM-dd"
-            let suffix = interval.map { "\(day.string(from: $0.start)) to \(day.string(from: $0.end.addingTimeInterval(-1)))" }
-                ?? "All \(day.string(from: now))"
-            pendingExport = PendingExport(
-                document: ExportDocument(data: data),
-                format: format,
-                filename: "Track Kar \(suffix)"
-            )
+            pendingExport = try PreparedExport.make(format, in: interval, context: context)
         } catch {
             exportError = error.localizedDescription
         }

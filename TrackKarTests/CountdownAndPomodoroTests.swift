@@ -6,11 +6,14 @@ import Testing
 @MainActor
 final class RecordingNotifier: TimerNotifying {
     var scheduled: [TimerAlert?] = []
+    var reminders: [TimerAlert?] = []
     var reached = 0
 
     var pending: TimerAlert? { scheduled.last ?? nil }
+    var pendingReminder: TimerAlert? { reminders.last ?? nil }
 
     func schedule(_ alert: TimerAlert?) { scheduled.append(alert) }
+    func scheduleReminder(_ reminder: TimerAlert?) { reminders.append(reminder) }
     func didReachAlert() { reached += 1 }
 }
 

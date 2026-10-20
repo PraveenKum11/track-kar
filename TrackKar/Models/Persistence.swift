@@ -27,7 +27,7 @@ enum Persistence {
         }
     }
 
-    private static var isRunningTests: Bool {
+    static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 }

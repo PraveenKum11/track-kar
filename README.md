@@ -40,6 +40,12 @@ open TrackKar.app --args -TrackKarSampleData YES
 ```
 In Xcode, add `-TrackKarSampleData YES` under **Product → Scheme → Edit Scheme → Run → Arguments**.
 
+### Dependencies
+The only third-party package is [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (MIT), for global shortcuts. Xcode fetches it automatically through Swift Package Manager.
+
+### App icon
+The icon is drawn in code. To change it, edit `Scripts/make-app-icon.swift`, then run `swift Scripts/make-app-icon.swift` from the repository root.
+
 ## Running a downloaded build
 Release builds are ad-hoc signed and not notarized, because the app is free and has no paid Apple Developer account. The first time you open the app, macOS will block it:
 1. Right-click **Track Kar.app** and choose **Open**, or
@@ -50,6 +56,7 @@ Release builds are ad-hoc signed and not notarized, because the app is free and 
 TrackKar/          App source (App, Features, Models, Engine, Theme, ...)
 TrackKarTests/     Unit tests (Swift Testing)
 TrackKar.xcodeproj Xcode project. Folders are synced, so new files are picked up automatically
+Scripts/           Tooling, such as the app icon generator
 PLAN.md            Product plan and roadmap
 ```
 

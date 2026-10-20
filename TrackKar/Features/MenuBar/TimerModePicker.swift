@@ -12,18 +12,27 @@ struct TimerModePicker: View {
     private static let presets = [5, 15, 25, 50]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             modeSegments
 
+            // Options sit in an inset card so they stay clear of the popover's edges.
             switch mode {
             case .stopwatch:
                 EmptyView()
             case .timer:
-                countdownOptions
+                optionsCard { countdownOptions }
             case .pomodoro:
-                pomodoroSummary
+                optionsCard { pomodoroSummary }
             }
         }
+    }
+
+    private func optionsCard(@ViewBuilder _ content: () -> some View) -> some View {
+        content()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .themedSurface(cornerRadius: 10)
     }
 
     /// A full-width segmented control. The system segmented picker only sizes to its content.
@@ -54,32 +63,49 @@ struct TimerModePicker: View {
     }
 
     private var countdownOptions: some View {
-        HStack(spacing: 6) {
-            ForEach(Self.presets, id: \.self) { minutes in
-                Button("\(minutes)m") { countdownMinutes = minutes }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                ForEach(Self.presets, id: \.self) { minutes in
+                    Button {
+                        countdownMinutes = minutes
+                    } label: {
+                        Text("\(minutes)m")
+                            .frame(maxWidth: .infinity)
+                    }
                     .themedButton(prominent: minutes == countdownMinutes)
                     .controlSize(.small)
+                }
             }
-            Spacer(minLength: 4)
-            Stepper(value: $countdownMinutes, in: 1...480) {
-                Text("\(countdownMinutes) min")
-                    .monospacedDigit()
-                    .font(.callout)
+            HStack {
+                Text("Length")
+                    .foregroundStyle(theme.secondaryText)
+                Spacer()
+                Stepper(value: $countdownMinutes, in: 1...480) {
+                    Text("\(countdownMinutes) min")
+                        .monospacedDigit()
+                }
+                .help("Custom length")
             }
-            .help("Custom length")
+            .font(.callout)
         }
     }
 
     private var pomodoroSummary: some View {
-        HStack {
-            Text("\(settings.focusMinutes)m focus · \(settings.shortBreakMinutes)m break · long break every \(settings.cyclesBeforeLongBreak)")
-                .font(.caption)
-                .foregroundStyle(theme.secondaryText)
-                .lineLimit(2)
-            Spacer(minLength: 4)
-            Button("Change…", action: onOpenSettings)
-                .buttonStyle(.borderless)
-                .font(.caption)
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 5) {
+                Label("\(settings.focusMinutes) min focus, \(settings.shortBreakMinutes) min breaks", systemImage: "brain")
+                Label("\(settings.longBreakMinutes) min long break every \(settings.cyclesBeforeLongBreak)", systemImage: "cup.and.saucer")
+            }
+            .font(.caption)
+            .foregroundStyle(theme.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Button("Edit", action: onOpenSettings)
+                .themedButton()
+                .controlSize(.small)
+                .help("Change Pomodoro lengths in Settings")
         }
     }
 }

@@ -191,3 +191,12 @@ struct TimerEngineTests {
         #expect(recent == [b])
     }
 }
+
+@MainActor
+struct InflectionTests {
+    @Test func countsAgreeWithTheirNouns() {
+        #expect(String.inflected("^[\(1) break](inflect: true)") == "1 break")
+        #expect(String.inflected("^[\(3) break](inflect: true)") == "3 breaks")
+        #expect(String.inflected("^[\(2) activity](inflect: true) and ^[\(1) group](inflect: true)") == "2 activities and 1 group")
+    }
+}

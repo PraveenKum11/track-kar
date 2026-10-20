@@ -50,6 +50,8 @@ struct DailyStackedChart: View {
                 .foregroundStyle(by: .value("Series", amount.series))
                 .cornerRadius(2)
                 .opacity(hoveredBucket == nil || hoveredBucket?.start == amount.day ? 1 : 0.4)
+                .accessibilityLabel("\(amount.series), \(amount.day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))")
+                .accessibilityValue(DurationFormat.short(amount.seconds))
             }
         }
         .chartForegroundStyleScale(

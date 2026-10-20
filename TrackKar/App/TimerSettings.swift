@@ -23,6 +23,10 @@ struct TimerSettings: Equatable {
     var cyclesBeforeLongBreak = 4
     var autoStartBreaks = true
     var autoStartFocus = false
+    /// Ask about time away after this many idle or asleep minutes. 0 is off.
+    var awayThresholdMinutes = 10
+    /// Remind after every this many hours of a running stopwatch. 0 is off.
+    var stillTrackingHours = 2
 
     func length(of phase: PomodoroPhase) -> TimeInterval {
         let minutes = switch phase {
@@ -49,6 +53,7 @@ extension TimerSettings: Codable {
     private enum CodingKeys: String, CodingKey {
         case countdownEnd, focusMinutes, shortBreakMinutes, longBreakMinutes
         case cyclesBeforeLongBreak, autoStartBreaks, autoStartFocus
+        case awayThresholdMinutes, stillTrackingHours
     }
 
     init(from decoder: Decoder) throws {
@@ -61,6 +66,8 @@ extension TimerSettings: Codable {
         cyclesBeforeLongBreak = try container.decodeIfPresent(Int.self, forKey: .cyclesBeforeLongBreak) ?? defaults.cyclesBeforeLongBreak
         autoStartBreaks = try container.decodeIfPresent(Bool.self, forKey: .autoStartBreaks) ?? defaults.autoStartBreaks
         autoStartFocus = try container.decodeIfPresent(Bool.self, forKey: .autoStartFocus) ?? defaults.autoStartFocus
+        awayThresholdMinutes = try container.decodeIfPresent(Int.self, forKey: .awayThresholdMinutes) ?? defaults.awayThresholdMinutes
+        stillTrackingHours = try container.decodeIfPresent(Int.self, forKey: .stillTrackingHours) ?? defaults.stillTrackingHours
     }
 
     func encode(to encoder: Encoder) throws {
@@ -72,6 +79,8 @@ extension TimerSettings: Codable {
         try container.encode(cyclesBeforeLongBreak, forKey: .cyclesBeforeLongBreak)
         try container.encode(autoStartBreaks, forKey: .autoStartBreaks)
         try container.encode(autoStartFocus, forKey: .autoStartFocus)
+        try container.encode(awayThresholdMinutes, forKey: .awayThresholdMinutes)
+        try container.encode(stillTrackingHours, forKey: .stillTrackingHours)
     }
 }
 

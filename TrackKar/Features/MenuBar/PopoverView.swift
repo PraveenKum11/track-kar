@@ -18,7 +18,7 @@ struct PopoverView: View {
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             if let entry = engine.activeEntry {
                 // While tracking, the timer leads and switching is secondary.
                 ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused && pendingSwitch == nil)

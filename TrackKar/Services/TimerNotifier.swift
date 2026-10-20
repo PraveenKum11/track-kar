@@ -7,10 +7,13 @@ struct TimerAlert: Equatable {
     var body: String
 }
 
-/// Delivers countdown and Pomodoro alerts. The engine keeps at most one pending alert.
+/// Delivers countdown and Pomodoro alerts, plus "still tracking?" reminders. The engine keeps at
+/// most one pending alert of each kind.
 protocol TimerNotifying: AnyObject {
-    /// Replaces any pending alert; `nil` cancels it.
+    /// Replaces any pending countdown or phase alert; `nil` cancels it.
     func schedule(_ alert: TimerAlert?)
+    /// Replaces any pending "still tracking?" reminder; `nil` cancels it.
+    func scheduleReminder(_ reminder: TimerAlert?)
     /// A countdown or phase ended while the app was watching.
     func didReachAlert()
 }
@@ -18,6 +21,7 @@ protocol TimerNotifying: AnyObject {
 /// For tests and previews.
 final class SilentNotifier: TimerNotifying {
     func schedule(_ alert: TimerAlert?) {}
+    func scheduleReminder(_ reminder: TimerAlert?) {}
     func didReachAlert() {}
 }
 
@@ -25,8 +29,8 @@ final class SilentNotifier: TimerNotifying {
 /// app is suspended or the Mac was asleep. Without notification permission it plays a sound itself.
 final class SystemNotifier: NSObject, TimerNotifying, UNUserNotificationCenterDelegate {
     private let center = UNUserNotificationCenter.current()
-    private let identifier = "timer-alert"
-    private var generation = 0
+    /// Bumped per identifier so a slow authorization check can't add a superseded request.
+    private var generations: [String: Int] = [:]
     private var isAuthorized = false
 
     override init() {
@@ -35,13 +39,21 @@ final class SystemNotifier: NSObject, TimerNotifying, UNUserNotificationCenterDe
     }
 
     func schedule(_ alert: TimerAlert?) {
-        generation += 1
-        let current = generation
+        replace("timer-alert", with: alert)
+    }
+
+    func scheduleReminder(_ reminder: TimerAlert?) {
+        replace("still-tracking", with: reminder)
+    }
+
+    private func replace(_ identifier: String, with alert: TimerAlert?) {
+        let current = (generations[identifier] ?? 0) + 1
+        generations[identifier] = current
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
         guard let alert, alert.date > .now else { return }
 
         Task {
-            guard await requestAuthorizationIfNeeded(), current == generation else { return }
+            guard await requestAuthorizationIfNeeded(), current == generations[identifier] else { return }
             let content = UNMutableNotificationContent()
             content.title = alert.title
             content.body = alert.body

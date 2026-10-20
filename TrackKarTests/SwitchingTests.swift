@@ -92,3 +92,41 @@ struct SwitchingTests {
         #expect(try context.fetchCount(FetchDescriptor<Break>()) == 0)
     }
 }
+
+@MainActor
+struct RestartTests {
+    let container = Persistence.makeContainer(inMemory: true)
+    let clock = TestClock()
+    let engine: TimerEngine
+
+    init() {
+        engine = TimerEngine(context: container.mainContext, clock: { [clock] in clock.date }, ticks: false)
+    }
+
+    @Test func restartsTheMostRecentActivityInTheSameMode() throws {
+        let gym = try EntryEditing.createActivity(name: "Gym", colorHex: nil, group: nil, in: container.mainContext)
+        engine.start(title: "Reading", newActivityBehavior: .neverSave)
+        clock.advance(60)
+        engine.start(activity: gym, kind: .countdown(900))
+        clock.advance(60)
+        engine.stop()
+
+        engine.restartMostRecent(newActivityBehavior: .ask)
+
+        #expect(engine.activeEntry?.activity == gym)
+        #expect(engine.activeEntry?.mode == .timer)
+        #expect(engine.activeEntry?.targetDuration == 900)
+    }
+
+    @Test func restartsUnsavedNamesAndStartsUntitledWhenEmpty() {
+        engine.restartMostRecent(newActivityBehavior: .neverSave)
+        #expect(engine.activeEntry?.title == "")
+        engine.stop()
+
+        clock.advance(10)
+        engine.start(title: "Errands", newActivityBehavior: .neverSave)
+        engine.stop()
+        engine.restartMostRecent(newActivityBehavior: .neverSave)
+        #expect(engine.activeEntry?.title == "Errands")
+    }
+}

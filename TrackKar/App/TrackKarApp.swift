@@ -8,7 +8,10 @@ struct TrackKarApp: App {
     @State private var engine: TimerEngine
     @State private var widthLock = StatusItemWidthLock()
     @State private var navigation = AppNavigation()
+    private let awayMonitor: AwayMonitor
+    private let hotkeys: Hotkeys
     @AppStorage(PreferenceKey.menuBarOptions) private var menuBarOptions = MenuBarOptions()
+    @AppStorage(PreferenceKey.hasSeenWelcome) private var hasSeenWelcome = false
 
     init() {
         #if DEBUG
@@ -28,7 +31,10 @@ struct TrackKarApp: App {
         let notifier: TimerNotifying = SystemNotifier()
         #endif
         self.container = container
-        _engine = State(initialValue: TimerEngine(context: container.mainContext, notifier: notifier))
+        let engine = TimerEngine(context: container.mainContext, notifier: notifier)
+        _engine = State(initialValue: engine)
+        awayMonitor = AwayMonitor(engine: engine)
+        hotkeys = Hotkeys(engine: engine)
     }
 
     var body: some Scene {
@@ -57,7 +63,24 @@ struct TrackKarApp: App {
             }
         }
 
+        Window("Welcome to Track Kar", id: WindowID.welcome) {
+            WelcomeView()
+                .environment(navigation)
+                .themedRoot()
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+        .defaultLaunchBehavior(showsWelcome ? .presented : .suppressed)
 
+
+    }
+
+    /// First launch only, and never under tests or sample data.
+    private var showsWelcome: Bool {
+        #if DEBUG
+        if SampleData.isRequested { return false }
+        #endif
+        return !hasSeenWelcome && !Persistence.isRunningTests
     }
 
     /// Hidden only when the user chose "Hidden" for idle and nothing is being tracked.
@@ -71,4 +94,5 @@ struct TrackKarApp: App {
 
 enum WindowID {
     static let main = "main"
+    static let welcome = "welcome"
 }

@@ -111,11 +111,11 @@ struct ActiveTimerView: View {
                 parts.append(String(localized: "\(DurationFormat.short(countdown?.total ?? 0)) focus"))
             }
             if entry.completedFocusCount > 0 {
-                parts.append(String(localized: "^[\(entry.completedFocusCount) pomodoro](inflect: true) done"))
+                parts.append(String.inflected("^[\(entry.completedFocusCount) pomodoro](inflect: true) done"))
             }
         }
         if entry.mode != .pomodoro, entry.breakCount > 0 {
-            parts.append(String(localized: "^[\(entry.breakCount) break](inflect: true)"))
+            parts.append(String.inflected("^[\(entry.breakCount) break](inflect: true)"))
         }
         return parts.joined(separator: " · ")
     }

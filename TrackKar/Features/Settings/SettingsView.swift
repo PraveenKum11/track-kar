@@ -1,3 +1,4 @@
+import KeyboardShortcuts
 import SwiftUI
 
 /// Settings, shown as a page in the main window (⌘, opens it).
@@ -55,6 +56,17 @@ private struct GeneralSettingsView: View {
                     }
                 }
             }
+            Section {
+                KeyboardShortcuts.Recorder("Show Track Kar", name: .togglePopover)
+                KeyboardShortcuts.Recorder("Start or stop the timer", name: .startStopTimer)
+                KeyboardShortcuts.Recorder("Pause or resume", name: .pauseResumeTimer)
+            } header: {
+                Text("Keyboard Shortcuts")
+            } footer: {
+                Text("These work from any app. Starting with no timer running restarts your most recent activity.")
+            }
+
+            DataSettingsSection()
         }
         .formStyle(.grouped)
     }

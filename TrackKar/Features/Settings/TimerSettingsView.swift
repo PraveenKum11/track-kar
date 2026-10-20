@@ -31,6 +31,21 @@ struct TimerSettingsView: View {
                 Text("Only focus time is tracked. Breaks are counted but never added to your time.")
             }
 
+            Section {
+                Picker("Ask about time away after", selection: $settings.awayThresholdMinutes) {
+                    Text("Never").tag(0)
+                    ForEach([5, 10, 15, 30, 60], id: \.self) { Text("\($0) minutes").tag($0) }
+                }
+                Picker("Remind me a stopwatch is still running every", selection: $settings.stillTrackingHours) {
+                    Text("Never").tag(0)
+                    ForEach([1, 2, 3, 4], id: \.self) { Text("^[\($0) hour](inflect: true)").tag($0) }
+                }
+            } header: {
+                Text("Reminders")
+            } footer: {
+                Text("When your Mac sleeps or sits idle while a timer runs, Track Kar asks whether to keep that time when you're back.")
+            }
+
             Section("Notifications") {
                 NotificationStatusRow()
             }
