@@ -105,7 +105,12 @@ xcodebuild -project TrackKar.xcodeproj -scheme TrackKar test
 
 **Dependencies.** The only third-party package is [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (MIT), for global shortcuts.
 
-**Continuous integration.** GitHub Actions builds and tests every push and pull request. Pushing a tag like `v0.2.0` builds a release and attaches the zip to a GitHub Release.
+**Continuous integration.** GitHub Actions builds and tests every push and pull request.
+
+**Releasing.**
+1. Move the **Unreleased** notes in [CHANGELOG.md](CHANGELOG.md) into a new version section.
+2. Commit, then push a tag like `v0.2.0`.
+3. The Release workflow builds the app, attaches the zip, and uses that changelog section as the release notes.
 
 ### Project layout
 ```
