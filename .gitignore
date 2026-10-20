@@ -20,3 +20,6 @@ Package.resolved.bak
 
 # Release artifacts
 *.zip
+
+# Internal development notes (not published)
+.dev/

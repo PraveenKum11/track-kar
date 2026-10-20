@@ -276,7 +276,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Track Kar";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Praveen Kumar. MIT License.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Praveen Kumar. Licensed under GPL-3.0-or-later.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -309,7 +309,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Track Kar";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Praveen Kumar. MIT License.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Praveen Kumar. Licensed under GPL-3.0-or-later.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

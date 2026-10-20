@@ -158,7 +158,9 @@ struct EntryRow: View {
                     Text(timeRange)
                     switch entry.mode {
                     case .pomodoro:
-                        Text("· ^[\(entry.completedFocusCount) pomodoro](inflect: true)")
+                        if entry.completedFocusCount > 0 {
+                            Text("· ^[\(entry.completedFocusCount) pomodoro](inflect: true)")
+                        }
                     case .timer:
                         Text("· \(DurationFormat.short(entry.targetDuration ?? 0)) timer")
                     case .stopwatch:

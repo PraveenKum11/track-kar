@@ -1,0 +1,62 @@
+name: Release
+
+# Push a tag like v0.2.0 to build Track Kar and publish it as a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Test
+        run: xcodebuild test -project TrackKar.xcodeproj -scheme TrackKar -destination 'platform=macOS' -derivedDataPath build CODE_SIGN_IDENTITY=-
+
+      - name: Build the app
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          xcodebuild build \
+            -project TrackKar.xcodeproj \
+            -scheme TrackKar \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY=- \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+
+      - name: Package
+        id: package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          # Ad-hoc signed and not notarized; the README explains how to open it.
+          ditto build/Build/Products/Release/TrackKar.app "dist/Track Kar.app"
+          codesign --verify --deep --strict "dist/Track Kar.app"
+          ZIP="Track-Kar-$VERSION.zip"
+          (cd dist && ditto -c -k --keepParent "Track Kar.app" "$ZIP" && shasum -a 256 "$ZIP" > "$ZIP.sha256")
+          echo "zip=dist/$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "${{ steps.package.outputs.zip }}" \
+            "${{ steps.package.outputs.zip }}.sha256" \
+            --title "Track Kar ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --notes "Unzip, move **Track Kar.app** to Applications, then allow it once in **System Settings → Privacy & Security → Open Anyway** (it isn't notarized). Requires macOS 26 or later."
