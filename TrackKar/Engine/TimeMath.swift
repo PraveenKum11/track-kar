@@ -21,9 +21,10 @@ enum DurationFormat {
         Duration.seconds(Int(seconds) / 60 * 60).formatted(.time(pattern: .hourMinute))
     }
 
-    /// `3h 42m`, rounded down like `clock`.
+    /// `3h 42m`, rounded down like `clock`. Time under a minute reads `<1m`, not `0m`.
     static func short(_ seconds: TimeInterval) -> String {
-        Duration.seconds(Int(seconds)).formatted(
+        if seconds > 0, seconds < 60 { return String(localized: "<1m") }
+        return Duration.seconds(Int(seconds)).formatted(
             .units(allowed: [.hours, .minutes], width: .narrow, fractionalPart: .hide(rounded: .down))
         )
     }

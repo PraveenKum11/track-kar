@@ -158,10 +158,9 @@ struct EntryRow: View {
                     Text(timeRange)
                     switch entry.mode {
                     case .pomodoro:
-                        Label("^[\(entry.completedFocusCount) pomodoro](inflect: true)", systemImage: "brain")
-                            .labelStyle(.titleAndIcon)
+                        Text("· ^[\(entry.completedFocusCount) pomodoro](inflect: true)")
                     case .timer:
-                        Label("\(DurationFormat.short(entry.targetDuration ?? 0)) timer", systemImage: "timer")
+                        Text("· \(DurationFormat.short(entry.targetDuration ?? 0)) timer")
                     case .stopwatch:
                         EmptyView()
                     }

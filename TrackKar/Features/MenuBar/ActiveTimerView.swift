@@ -181,9 +181,6 @@ struct ActiveTimerView: View {
             Label(title, systemImage: systemImage)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
-                // Prominent glass buttons draw symbols in a vibrant tint that doesn't match
-                // their white text; keep the whole label white.
-                .foregroundStyle(prominent ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         }
         .themedButton(prominent: prominent)
     }

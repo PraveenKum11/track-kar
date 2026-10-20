@@ -13,11 +13,7 @@ struct TimerModePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Mode", selection: $mode) {
-                ForEach(TimerMode.allCases) { Text($0.label).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            modeSegments
 
             switch mode {
             case .stopwatch:
@@ -28,6 +24,33 @@ struct TimerModePicker: View {
                 pomodoroSummary
             }
         }
+    }
+
+    /// A full-width segmented control. The system segmented picker only sizes to its content.
+    private var modeSegments: some View {
+        HStack(spacing: 2) {
+            ForEach(TimerMode.allCases) { option in
+                let isSelected = option == mode
+                Button {
+                    mode = option
+                } label: {
+                    Text(option.label)
+                        .font(.callout.weight(isSelected ? .semibold : .regular))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .contentShape(.rect)
+                        .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(theme.primaryText))
+                        .background(isSelected ? theme.accent : .clear, in: .rect(cornerRadius: 7, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .padding(2)
+        .themedSurface(cornerRadius: 9)
+        .animation(.snappy(duration: 0.2), value: mode)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Timer mode")
     }
 
     private var countdownOptions: some View {

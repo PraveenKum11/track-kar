@@ -161,6 +161,8 @@ struct TimerEngineTests {
     @Test func durationsRoundDown() {
         #expect(DurationFormat.clock(5_045.9) == "1:24:05")
         #expect(DurationFormat.short(119) == "1m")
+        #expect(DurationFormat.short(20) == "<1m")
+        #expect(DurationFormat.short(0) == "0m")
         #expect(DurationFormat.short(13_379) == "3h 42m")
     }
 

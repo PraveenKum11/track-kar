@@ -141,9 +141,11 @@ private struct TrackingToolbarControl: View {
                 }
                 Text(entry.displayName)
                     .lineLimit(1)
-                    .frame(maxWidth: 180)
+                    .frame(maxWidth: 200)
                 Text(toolbarTime)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(engine.state == .paused ? .secondary : .primary)
                 Button {
                     engine.togglePause()
@@ -167,7 +169,9 @@ private struct TrackingToolbarControl: View {
                 }
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 10)
+        // Toolbars squeeze items to their minimum; size to content so the time stays on one line.
+        .fixedSize()
         .popover(isPresented: $isShowingPopover, arrowEdge: .bottom) {
             PopoverView()
         }

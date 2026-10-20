@@ -96,10 +96,22 @@ private struct ThemedButton: ViewModifier {
 
     func body(content: Content) -> some View {
         switch (theme.style, prominent) {
-        case (.glass, true): content.buttonStyle(.glassProminent)
+        case (.glass, true): content.buttonStyle(WhiteLabelGlassProminentStyle())
         case (.glass, false): content.buttonStyle(.glass)
         case (.solid, true): content.buttonStyle(.borderedProminent)
         case (.solid, false): content.buttonStyle(.bordered)
         }
+    }
+}
+
+/// `.glassProminent`, but with a plain white label. The built-in style draws the label in a
+/// vibrant tint that reads as cyan on the accent fill.
+private struct WhiteLabelGlassProminentStyle: PrimitiveButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button(role: configuration.role, action: configuration.trigger) {
+            configuration.label
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.glassProminent)
     }
 }

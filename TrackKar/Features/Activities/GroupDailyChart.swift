@@ -46,7 +46,10 @@ struct GroupDailyChart: View {
             domain: series.map(\.name),
             range: series.map { Color.activity($0.colorHex) }
         )
-        .chartXScale(domain: (days.first?.start ?? .now)...(days.last?.end ?? .now))
+        .chartXScale(
+            domain: (days.first?.start ?? .now)...(days.last?.end ?? .now),
+            range: .plotDimension(endPadding: 24)
+        )
         .chartLegend(series.count > 1 ? .visible : .hidden)
         .chartLegend(position: .bottom, alignment: .leading)
         .chartXAxis {
@@ -67,26 +70,44 @@ struct GroupDailyChart: View {
         }
         .chartOverlay { proxy in
             GeometryReader { geometry in
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(.rect)
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case .active(let location):
-                            guard let plotFrame = proxy.plotFrame else { return }
-                            let x = location.x - geometry[plotFrame].origin.x
-                            hoveredDay = proxy.value(atX: x, as: Date.self).map { Calendar.current.startOfDay(for: $0) }
-                        case .ended:
-                            hoveredDay = nil
+                ZStack(alignment: .topLeading) {
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(.rect)
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active(let location):
+                                guard let plotFrame = proxy.plotFrame else { return }
+                                let x = location.x - geometry[plotFrame].origin.x
+                                hoveredDay = proxy.value(atX: x, as: Date.self).map { Calendar.current.startOfDay(for: $0) }
+                            case .ended:
+                                hoveredDay = nil
+                            }
                         }
+
+                    if let hoveredDay,
+                       let plotFrame = proxy.plotFrame,
+                       let barX = proxy.position(forX: hoveredDay.addingTimeInterval(12 * 3_600)) {
+                        positionedTooltip(for: hoveredDay, barX: geometry[plotFrame].origin.x + barX, top: geometry[plotFrame].origin.y, width: geometry.size.width)
                     }
+                }
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if let hoveredDay {
-                tooltip(for: hoveredDay)
-            }
+    }
+
+    /// Sits beside the hovered bar, on whichever side has more room.
+    private func positionedTooltip(for day: Date, barX: CGFloat, top: CGFloat, width: CGFloat) -> some View {
+        let onLeft = barX > width / 2
+        return HStack(spacing: 0) {
+            if onLeft { Spacer(minLength: 0) }
+            tooltip(for: day)
+                .fixedSize()
+            if !onLeft { Spacer(minLength: 0) }
         }
+        .padding(.leading, onLeft ? 0 : barX + 12)
+        .padding(.trailing, onLeft ? width - barX + 12 : 0)
+        .padding(.top, top)
+        .allowsHitTesting(false)
     }
 
     private func tooltip(for day: Date) -> some View {
@@ -119,8 +140,8 @@ struct GroupDailyChart: View {
             }
         }
         .padding(8)
-        .frame(minWidth: 160)
+        .frame(minWidth: 140)
         .background(.regularMaterial, in: .rect(cornerRadius: 8))
-        .allowsHitTesting(false)
+        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
     }
 }
