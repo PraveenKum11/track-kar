@@ -64,8 +64,7 @@ struct PopoverView: View {
             TodayTotalView(day: today, now: reference)
             Spacer()
             Button {
-                openWindow(id: WindowID.main)
-                NSApp.activate()
+                AppActivation.showMainWindow(openWindow)
             } label: {
                 Label("Open Track Kar", systemImage: "macwindow")
             }
@@ -73,8 +72,7 @@ struct PopoverView: View {
             .help("Open Track Kar (⌘O)")
 
             Button {
-                openSettings()
-                NSApp.activate()
+                AppActivation.showSettings(openSettings)
             } label: {
                 Label("Settings", systemImage: "gearshape")
             }

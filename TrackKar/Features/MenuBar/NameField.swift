@@ -46,7 +46,7 @@ struct NameField: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Circle()
-                                    .fill(Color(hex: activity.colorHex))
+                                    .fill(Color.activity(activity.colorHex))
                                     .frame(width: 8, height: 8)
                                 Text(activity.name)
                                     .lineLimit(1)

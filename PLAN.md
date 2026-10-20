@@ -324,13 +324,28 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 > **Deviation:** Settings uses the standard macOS Settings window (⌘,) rather than a sidebar item in the main window. This is more native and keeps the main window focused on data.
 
 ### Phase 2: Full app window
-- [ ] Window scene with sidebar navigation, opened from the popover.
-- [ ] History / Timeline: list, edit, delete and manual entries.
-- [ ] Activities: CRUD, color, archive and merge, plus "save unsaved entries as activity".
-- [ ] Groups: CRUD, assign activities, a flat or grouped list toggle, and a group detail view with the total and an optional target progress bar.
-- [ ] Settings: launch at login and first day of week.
-- [ ] Menu Bar settings page with a live preview (3.5).
-- [ ] Theme layer (Glass and Solid, Light, Dark and System, accent color) and the Appearance settings page (3.6). The theme layer itself is built in **Phase 1**, so every view uses it from the start.
+- [x] Window scene with sidebar navigation (History, Activities, Groups), opened from the popover (⌘O).
+  - A toolbar timer control shows the running entry with pause/stop, or a Start button that opens the popover's controls.
+  - While the window is open the app gets a Dock icon, a ⌘-Tab entry and an app menu. Closing the window keeps the app running in the menu bar.
+- [x] History / Timeline:
+  - entries grouped by day with day totals.
+  - edit an entry (activity, name, start and end with its breaks kept, notes) by double-clicking it or pressing Return.
+  - add manual entries, and delete one or many with confirmation. A running entry can't be deleted.
+  - "Save as Activity" from the context menu.
+- [x] Activities: create, rename (entry names follow), recolor, move to a group, archive, merge and delete. Deleting keeps the entries as unsaved. An "Unsaved" section saves tracked names as activities.
+- [x] Groups:
+  - create and edit (name, color, optional target hours, members), drag activities onto a group in the sidebar, and delete (activities become ungrouped).
+  - a "by group" list layout.
+  - a group detail page with the total, target progress, summary tiles, a stacked 30-day chart with a hover tooltip, and a per-activity breakdown.
+- [x] Settings → General: launch at login (`SMAppService`) and first day of week.
+- [x] Settings → Menu Bar, with a live preview (3.5). The Pomodoro display options come in Phase 3.
+- [x] Settings → Appearance: mode, style and accent color, with a live popover preview (3.6). Mode now applies to the menu bar panel too.
+- [x] Activity palette replaced with an 8-color palette validated for color-vision deficiency and contrast in light and dark modes. Charts fold activities beyond 7 into "Other" instead of reusing colors.
+- [x] Debug-only `-TrackKarSampleData YES` launch flag that seeds realistic data into an in-memory store for screenshots and manual testing.
+
+> **Notes from building Phase 2:**
+> - **One image per label.** A status item label renders a single image plus text, so the color dot takes the icon's place (the pause glyph wins while paused).
+> - **Dimming.** Opacity is ignored in the menu bar, so the dimmed paused style is drawn as a reduced-alpha template image.
 
 ### Phase 3: Timer modes and Pomodoro
 - [ ] Countdown timer with presets, a notification and sound, and an overtime option.

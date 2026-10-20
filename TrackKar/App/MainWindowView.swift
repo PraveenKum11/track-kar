@@ -1,17 +1,175 @@
+import SwiftData
 import SwiftUI
 
-/// Placeholder for the full app window. Replaced by the sidebar shell in Phase 2.
+enum SidebarItem: Hashable {
+    case history
+    case activities
+    case group(PersistentIdentifier)
+}
+
+/// The full app window: sidebar navigation plus a timer control in the toolbar.
 struct MainWindowView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(TimerEngine.self) private var engine
+    @Query(filter: #Predicate<ActivityGroup> { !$0.isArchived }, sort: \ActivityGroup.name)
+    private var groups: [ActivityGroup]
+
+    @State private var selection: SidebarItem? = .history
+    @State private var groupEditor: GroupEditorSheet.Target?
+    @State private var groupToDelete: ActivityGroup?
+
     var body: some View {
-        ContentUnavailableView(
-            "Track Kar",
-            systemImage: "timer",
-            description: Text("Dashboard, history and activities will live here.")
-        )
-        .frame(minWidth: 600, minHeight: 400)
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            detail
+        }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                TrackingToolbarControl()
+            }
+        }
+        .sheet(item: $groupEditor) { target in
+            GroupEditorSheet(target: target) { group in
+                selection = .group(group.persistentModelID)
+            }
+        }
+        .confirmationDialog(
+            "Delete “\(groupToDelete?.name ?? "")”?",
+            isPresented: Binding(get: { groupToDelete != nil }, set: { if !$0 { groupToDelete = nil } }),
+            presenting: groupToDelete
+        ) { group in
+            Button("Delete Group", role: .destructive) {
+                if selection == .group(group.persistentModelID) { selection = .activities }
+                EntryEditing.delete(group, in: context)
+                engine.saveChanges()
+            }
+        } message: { _ in
+            Text("Its activities become ungrouped. No tracked time is lost.")
+        }
+        .frame(minWidth: 760, minHeight: 480)
+        // Behave like a regular app (Dock icon, ⌘-Tab, app menu) while the window is open.
+        .onAppear {
+            NSApp.setActivationPolicy(.regular)
+            AppActivation.bringToFront()
+        }
+        .onDisappear {
+            AppActivation.mainWindowClosed()
+        }
+    }
+
+    private var sidebar: some View {
+        List(selection: $selection) {
+            Section {
+                Label("History", systemImage: "clock.arrow.circlepath")
+                    .tag(SidebarItem.history)
+                Label("Activities", systemImage: "square.stack")
+                    .tag(SidebarItem.activities)
+            }
+
+            Section("Groups") {
+                ForEach(groups) { group in
+                    Label {
+                        Text(group.name)
+                    } icon: {
+                        Image(systemName: "folder.fill")
+                            .foregroundStyle(Color.activity(group.colorHex))
+                    }
+                    .tag(SidebarItem.group(group.persistentModelID))
+                    .dropDestination(for: String.self) { ids, _ in
+                        assignActivities(withIDs: ids, to: group)
+                    }
+                    .contextMenu {
+                        Button("Edit Group…") { groupEditor = .edit(group) }
+                        Button("Delete Group…", role: .destructive) { groupToDelete = group }
+                    }
+                }
+            }
+        }
+        .navigationSplitViewColumnWidth(min: 180, ideal: 210)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                groupEditor = .new
+            } label: {
+                Label("New Group", systemImage: "plus")
+            }
+            .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+        }
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selection {
+        case .history, nil:
+            HistoryView()
+        case .activities:
+            ActivitiesView()
+        case .group(let id):
+            if let group = groups.first(where: { $0.persistentModelID == id }) {
+                GroupDetailView(group: group) { groupEditor = .edit(group) }
+            } else {
+                ContentUnavailableView("No Group Selected", systemImage: "folder")
+            }
+        }
+    }
+
+    /// Handles activities dragged from the Activities list onto a sidebar group.
+    private func assignActivities(withIDs ids: [String], to group: ActivityGroup) {
+        let uuids = Set(ids.compactMap(UUID.init(uuidString:)))
+        let activities = (try? context.fetch(FetchDescriptor<Activity>())) ?? []
+        for activity in activities where uuids.contains(activity.id) {
+            activity.group = group
+        }
+        engine.saveChanges()
     }
 }
 
-#Preview {
-    MainWindowView()
+/// Toolbar timer: live status with pause/stop, or a button that opens the popover's controls.
+private struct TrackingToolbarControl: View {
+    @Environment(TimerEngine.self) private var engine
+    @State private var isShowingPopover = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let entry = engine.activeEntry {
+                if let hex = entry.colorHex {
+                    Circle()
+                        .fill(Color.activity(hex))
+                        .frame(width: 8, height: 8)
+                }
+                Text(entry.displayName)
+                    .lineLimit(1)
+                    .frame(maxWidth: 180)
+                Text(DurationFormat.clock(engine.elapsed))
+                    .monospacedDigit()
+                    .foregroundStyle(engine.state == .paused ? .secondary : .primary)
+                Button {
+                    engine.togglePause()
+                } label: {
+                    Label(
+                        engine.state == .paused ? "Resume" : "Pause",
+                        systemImage: engine.state == .paused ? "play.fill" : "pause.fill"
+                    )
+                }
+                Button {
+                    engine.stop()
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                }
+            } else {
+                Button {
+                    isShowingPopover = true
+                } label: {
+                    Label("Start Timer", systemImage: "play.fill")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+        }
+        .padding(.horizontal, 6)
+        .popover(isPresented: $isShowingPopover, arrowEdge: .bottom) {
+            PopoverView()
+        }
+    }
 }

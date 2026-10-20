@@ -14,7 +14,7 @@ enum TrackingState: Equatable {
 @Observable
 final class TimerEngine {
     private(set) var activeEntry: TimeEntry?
-    /// Refreshed every second while running so views re-render.
+    /// Refreshed every second while an entry is active so views re-render (and a paused time can blink).
     private(set) var now: Date
     /// The entry whose "Save as activity?" question is waiting for an answer.
     private(set) var savePromptEntry: TimeEntry?
@@ -117,6 +117,31 @@ final class TimerEngine {
         savePromptEntry = nil
     }
 
+    /// Deletes finished entries. The active entry is skipped; stop it first.
+    func delete(_ entries: [TimeEntry]) {
+        for entry in entries where entry != activeEntry {
+            if entry == savePromptEntry { savePromptEntry = nil }
+            context.delete(entry)
+        }
+        commit()
+    }
+
+    /// Persists edits made elsewhere (History, Activities) and refreshes dependent views.
+    func saveChanges() {
+        commit()
+    }
+
+    /// Tracked time today, including the part of entries that crossed midnight.
+    func todayTotal(calendar: Calendar = .current) -> TimeInterval {
+        let reference = state == .running ? now : clock()
+        guard let today = calendar.dateInterval(of: .day, for: reference) else { return 0 }
+        let dayStart = today.start
+        let openEnded = Date.distantFuture
+        let descriptor = FetchDescriptor<TimeEntry>(predicate: #Predicate { ($0.endedAt ?? openEnded) > dayStart })
+        let entries = (try? context.fetch(descriptor)) ?? []
+        return Stats.total(of: entries, in: today, at: reference)
+    }
+
     // MARK: - Internals
 
     @discardableResult
@@ -178,7 +203,7 @@ final class TimerEngine {
     private func updateTicker() {
         now = clock()
         guard ticks else { return }
-        if state == .running {
+        if state != .idle {
             guard tickTask == nil else { return }
             tickTask = Task { [weak self] in
                 while !Task.isCancelled {

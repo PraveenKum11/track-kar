@@ -16,6 +16,11 @@ enum DurationFormat {
         Duration.seconds(Int(seconds)).formatted(.time(pattern: .hourMinuteSecond))
     }
 
+    /// `1:24`
+    static func clockNoSeconds(_ seconds: TimeInterval) -> String {
+        Duration.seconds(Int(seconds) / 60 * 60).formatted(.time(pattern: .hourMinute))
+    }
+
     /// `3h 42m`, rounded down like `clock`.
     static func short(_ seconds: TimeInterval) -> String {
         Duration.seconds(Int(seconds)).formatted(

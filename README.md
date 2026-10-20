@@ -33,6 +33,13 @@ xcodebuild -project TrackKar.xcodeproj -scheme TrackKar build
 xcodebuild -project TrackKar.xcodeproj -scheme TrackKar test
 ```
 
+### Sample data
+Debug builds accept a launch argument that loads realistic sample data into an in-memory store. Your real data is never touched:
+```sh
+open TrackKar.app --args -TrackKarSampleData YES
+```
+In Xcode, add `-TrackKarSampleData YES` under **Product → Scheme → Edit Scheme → Run → Arguments**.
+
 ## Running a downloaded build
 Release builds are ad-hoc signed and not notarized, because the app is free and has no paid Apple Developer account. The first time you open the app, macOS will block it:
 1. Right-click **Track Kar.app** and choose **Open**, or

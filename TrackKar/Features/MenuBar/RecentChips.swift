@@ -33,7 +33,7 @@ struct RecentChips: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Circle()
-                                    .fill(Color(hex: activity.colorHex))
+                                    .fill(Color.activity(activity.colorHex))
                                     .frame(width: 7, height: 7)
                                 Text(activity.name)
                                     .lineLimit(1)

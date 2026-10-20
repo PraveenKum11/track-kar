@@ -20,7 +20,7 @@ struct ActiveTimerView: View {
             HStack(spacing: 6) {
                 if let hex = entry.colorHex {
                     Circle()
-                        .fill(Color(hex: hex))
+                        .fill(Color.activity(hex))
                         .frame(width: 8, height: 8)
                 }
                 Text(entry.displayName)
