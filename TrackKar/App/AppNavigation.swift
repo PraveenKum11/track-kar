@@ -3,6 +3,7 @@ import SwiftData
 import SwiftUI
 
 enum SidebarItem: Hashable {
+    case dashboard
     case history
     case activities
     case group(PersistentIdentifier)
@@ -27,7 +28,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 /// What the main window shows. Shared so the popover and menu commands can open a specific page.
 @Observable
 final class AppNavigation {
-    var selection: SidebarItem? = .history
+    var selection: SidebarItem? = .dashboard
     var settingsTab: SettingsTab = .general
 
     /// Opens the main window on a Settings section.

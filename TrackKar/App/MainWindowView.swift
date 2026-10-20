@@ -56,6 +56,8 @@ struct MainWindowView: View {
         @Bindable var navigation = navigation
         return List(selection: $navigation.selection) {
             Section {
+                Label("Dashboard", systemImage: "chart.bar.xaxis")
+                    .tag(SidebarItem.dashboard)
                 Label("History", systemImage: "clock.arrow.circlepath")
                     .tag(SidebarItem.history)
                 Label("Activities", systemImage: "square.stack")
@@ -102,7 +104,9 @@ struct MainWindowView: View {
     @ViewBuilder
     private var detail: some View {
         switch navigation.selection {
-        case .history, nil:
+        case .dashboard, nil:
+            DashboardView()
+        case .history:
             HistoryView()
         case .activities:
             ActivitiesView()

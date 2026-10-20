@@ -36,9 +36,10 @@ struct GroupDetailView: View {
                         Text("Last 30 days")
                             .font(.headline)
                         let days = Stats.days(endingAt: now, count: 30, calendar: firstWeekday.calendar)
-                        GroupDailyChart(
+                        DailyStackedChart(
                             amounts: Stats.dailyAmounts(for: activities, days: days, at: now),
-                            days: days
+                            buckets: days,
+                            emptyMessage: "No time tracked in the last 30 days."
                         )
                         .frame(height: 220)
                     }

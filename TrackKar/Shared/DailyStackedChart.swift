@@ -1,26 +1,36 @@
 import Charts
 import SwiftUI
 
-/// Hours per day, stacked by activity, with a hover tooltip.
-struct GroupDailyChart: View {
+/// Hours per day (or week), stacked by activity or group, with a hover tooltip.
+struct DailyStackedChart: View {
     let amounts: [DailyAmount]
-    /// The full range to show, so empty days still take up space.
-    let days: [DateInterval]
+    /// The full range to show, so empty buckets still take up space.
+    let buckets: [DateInterval]
+    var unit: Calendar.Component = .day
+    var emptyMessage: LocalizedStringKey = "No time tracked in this period."
 
     @Environment(\.appTheme) private var theme
-    @State private var hoveredDay: Date?
+    @State private var hoveredBucket: DateInterval?
 
-    /// Series in first-appearance order, which `Stats.dailyAmounts` ranks by total.
+    /// Series ordered by total time, largest first, with "Other" last.
     private var series: [(name: String, colorHex: String)] {
-        var seen = Set<String>()
-        return amounts.compactMap { amount in
-            seen.insert(amount.series).inserted ? (amount.series, amount.colorHex) : nil
+        var totals: [String: (colorHex: String, seconds: TimeInterval)] = [:]
+        for amount in amounts {
+            totals[amount.series, default: (amount.colorHex, 0)].seconds += amount.seconds
         }
+        let other = String(localized: "Other")
+        return totals
+            .sorted { lhs, rhs in
+                if lhs.key == other { return false }
+                if rhs.key == other { return true }
+                return lhs.value.seconds > rhs.value.seconds
+            }
+            .map { ($0.key, $0.value.colorHex) }
     }
 
     var body: some View {
         if amounts.isEmpty {
-            Text("No time tracked in the last 30 days.")
+            Text(emptyMessage)
                 .foregroundStyle(theme.secondaryText)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -33,13 +43,13 @@ struct GroupDailyChart: View {
         return Chart {
             ForEach(amounts) { amount in
                 BarMark(
-                    x: .value("Day", amount.day, unit: .day),
+                    x: .value("Date", amount.day, unit: unit),
                     y: .value("Hours", amount.hours),
                     width: .ratio(0.6)
                 )
-                .foregroundStyle(by: .value("Activity", amount.series))
+                .foregroundStyle(by: .value("Series", amount.series))
                 .cornerRadius(2)
-                .opacity(hoveredDay == nil || hoveredDay == amount.day ? 1 : 0.4)
+                .opacity(hoveredBucket == nil || hoveredBucket?.start == amount.day ? 1 : 0.4)
             }
         }
         .chartForegroundStyleScale(
@@ -47,13 +57,13 @@ struct GroupDailyChart: View {
             range: series.map { Color.activity($0.colorHex) }
         )
         .chartXScale(
-            domain: (days.first?.start ?? .now)...(days.last?.end ?? .now),
+            domain: (buckets.first?.start ?? .now)...(buckets.last?.end ?? .now),
             range: .plotDimension(endPadding: 24)
         )
         .chartLegend(series.count > 1 ? .visible : .hidden)
         .chartLegend(position: .bottom, alignment: .leading)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: 7)) { _ in
+            AxisMarks(values: .automatic(desiredCount: 6)) { _ in
                 AxisValueLabel(format: .dateTime.month(.abbreviated).day())
             }
         }
@@ -79,16 +89,23 @@ struct GroupDailyChart: View {
                             case .active(let location):
                                 guard let plotFrame = proxy.plotFrame else { return }
                                 let x = location.x - geometry[plotFrame].origin.x
-                                hoveredDay = proxy.value(atX: x, as: Date.self).map { Calendar.current.startOfDay(for: $0) }
+                                hoveredBucket = proxy.value(atX: x, as: Date.self).flatMap { date in
+                                    buckets.first { $0.contains(date) }
+                                }
                             case .ended:
-                                hoveredDay = nil
+                                hoveredBucket = nil
                             }
                         }
 
-                    if let hoveredDay,
+                    if let hoveredBucket,
                        let plotFrame = proxy.plotFrame,
-                       let barX = proxy.position(forX: hoveredDay.addingTimeInterval(12 * 3_600)) {
-                        positionedTooltip(for: hoveredDay, barX: geometry[plotFrame].origin.x + barX, top: geometry[plotFrame].origin.y, width: geometry.size.width)
+                       let barX = proxy.position(forX: hoveredBucket.start.addingTimeInterval(hoveredBucket.duration / 2)) {
+                        positionedTooltip(
+                            for: hoveredBucket,
+                            barX: geometry[plotFrame].origin.x + barX,
+                            top: geometry[plotFrame].origin.y,
+                            width: geometry.size.width
+                        )
                     }
                 }
             }
@@ -96,11 +113,11 @@ struct GroupDailyChart: View {
     }
 
     /// Sits beside the hovered bar, on whichever side has more room.
-    private func positionedTooltip(for day: Date, barX: CGFloat, top: CGFloat, width: CGFloat) -> some View {
+    private func positionedTooltip(for bucket: DateInterval, barX: CGFloat, top: CGFloat, width: CGFloat) -> some View {
         let onLeft = barX > width / 2
         return HStack(spacing: 0) {
             if onLeft { Spacer(minLength: 0) }
-            tooltip(for: day)
+            tooltip(for: bucket)
                 .fixedSize()
             if !onLeft { Spacer(minLength: 0) }
         }
@@ -110,13 +127,21 @@ struct GroupDailyChart: View {
         .allowsHitTesting(false)
     }
 
-    private func tooltip(for day: Date) -> some View {
-        let dayAmounts = amounts.filter { $0.day == day }
-        let total = dayAmounts.reduce(0) { $0 + $1.seconds }
+    private func tooltip(for bucket: DateInterval) -> some View {
+        let bucketAmounts = amounts.filter { $0.day == bucket.start }
+        let total = bucketAmounts.reduce(0) { $0 + $1.seconds }
+        let title = unit == .day
+            ? bucket.start.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            : String(localized: "Week of \(bucket.start.formatted(.dateTime.month(.abbreviated).day()))")
         return VStack(alignment: .leading, spacing: 4) {
-            Text(day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+            Text(title)
                 .font(.caption.weight(.semibold))
-            ForEach(dayAmounts) { amount in
+            if bucketAmounts.isEmpty {
+                Text("Nothing tracked")
+                    .font(.caption)
+                    .foregroundStyle(theme.secondaryText)
+            }
+            ForEach(bucketAmounts) { amount in
                 HStack(spacing: 6) {
                     Circle()
                         .fill(Color.activity(amount.colorHex))
@@ -128,7 +153,7 @@ struct GroupDailyChart: View {
                 }
                 .font(.caption)
             }
-            if dayAmounts.count != 1 {
+            if bucketAmounts.count > 1 {
                 Divider()
                 HStack {
                     Text("Total")

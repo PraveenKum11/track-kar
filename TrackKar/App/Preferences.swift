@@ -13,6 +13,7 @@ enum PreferenceKey {
     static let timerSettings = "timerSettings"
     static let selectedTimerMode = "selectedTimerMode"
     static let countdownMinutes = "countdownMinutes"
+    static let dashboardGrouping = "dashboardGrouping"
 }
 
 /// What happens when a timer starts with a name that isn't a saved activity yet.

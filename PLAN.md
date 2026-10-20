@@ -372,10 +372,13 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 Postponed on 2026-10-20 and moved to the backlog. Phase 5 is next.
 
 ### Phase 5: Dashboard and insights
-- [ ] Range picker, totals and comparison with the previous period.
-- [ ] Break stats: count per day, total and average length.
-- [ ] Stacked bar chart (per day by activity) and a per-activity breakdown, with a "by group" toggle.
-- [ ] CSV/JSON export.
+- [x] Dashboard page (first in the sidebar and the window's default page):
+  - Day, Week, Month or Custom range, with ‹ › to step back through past periods. Weeks follow the first-day-of-week setting.
+  - total tracked, compared with the previous period of the same kind ("↓ 15h 12m (55%) less than the week before").
+  - daily average (over days so far), sessions, break count and total, and average break.
+- [x] Stacked chart per day, or per week for ranges over about 2 months, by activity or by group, with hover details. The group page now uses the same chart.
+- [x] Breakdown list by activity or group: sessions, time, share and a colored bar. Unsaved and ungrouped time get their own neutral bucket.
+- [x] Export as CSV (spreadsheet-friendly, RFC 4180, formula-safe) or JSON (a full record including segments, breaks, activities and groups, versioned for a future import), for the selected range or everything. Uses the sandbox's user-selected read/write permission.
 
 ### Phase 6: Polish and robustness
 - [ ] Global hotkeys.
