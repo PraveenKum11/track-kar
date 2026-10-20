@@ -11,7 +11,12 @@ struct NameField: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
     let placeholder: String
+    var systemImage = "magnifyingglass"
+    /// Shows a start button inside the field.
+    var onStart: (() -> Void)?
     let onSubmit: (Submission) -> Void
+
+    @Environment(\.appTheme) private var theme
 
     @Query(filter: #Predicate<Activity> { !$0.isArchived }, sort: \Activity.name)
     private var activities: [Activity]
@@ -23,20 +28,39 @@ struct NameField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            TextField(placeholder, text: $text)
-                .textFieldStyle(.plain)
-                .focused(isFocused)
-                .onSubmit(submit)
-                .onKeyPress(.downArrow) { moveHighlight(by: 1) }
-                .onKeyPress(.upArrow) { moveHighlight(by: -1) }
-                .onKeyPress(.escape) {
-                    guard !text.isEmpty else { return .ignored }
-                    text = ""
-                    return .handled
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(theme.secondaryText)
+                    .frame(width: 16)
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(.plain)
+                    .focused(isFocused)
+                    .onSubmit(submit)
+                    .onKeyPress(.downArrow) { moveHighlight(by: 1) }
+                    .onKeyPress(.upArrow) { moveHighlight(by: -1) }
+                    .onKeyPress(.escape) {
+                        guard !text.isEmpty else { return .ignored }
+                        text = ""
+                        return .handled
+                    }
+                if let onStart {
+                    Button(action: onStart) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .frame(width: 26, height: 26)
+                            .background(theme.accent, in: .circle)
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Start (Return)")
+                    .accessibilityLabel("Start")
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .themedSurface(cornerRadius: 8)
+            }
+            .padding(.leading, 10)
+            .padding(.trailing, onStart == nil ? 10 : 5)
+            .padding(.vertical, onStart == nil ? 8 : 5)
+            .frame(minHeight: 36)
+            .themedSurface(cornerRadius: 10)
 
             if !suggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {

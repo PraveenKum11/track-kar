@@ -4,22 +4,35 @@ import SwiftUI
 struct MenuBarLabel: View {
     let engine: TimerEngine
     let options: MenuBarOptions
+    let widthLock: StatusItemWidthLock
 
     var body: some View {
-        let entry = engine.activeEntry
         MenuBarLabelContent(
-            content: .make(
-                options: options,
-                state: engine.state,
-                elapsed: engine.elapsed,
-                activityName: entry?.displayName,
-                colorHex: entry?.colorHex,
-                todayTotal: options.idleDisplay == .iconAndToday && engine.state == .idle ? engine.todayTotal() : 0,
-                blinkOn: Int(engine.now.timeIntervalSinceReferenceDate) % 2 == 0,
-                countdown: engine.countdown
-            ),
-            fixedWidth: options.fixedWidth
+            content: Self.content(engine: engine, options: options),
+            fixedWidth: options.fixedWidth,
+            minimumWidth: widthLock.isPopoverOpen ? widthLock.minimumWidth : 0,
+            onRender: { widthLock.accommodate($0) }
         )
+    }
+
+    static func content(engine: TimerEngine, options: MenuBarOptions) -> MenuBarContent {
+        let entry = engine.activeEntry
+        return .make(
+            options: options,
+            state: engine.state,
+            elapsed: engine.elapsed,
+            activityName: entry?.displayName,
+            colorHex: entry?.colorHex,
+            todayTotal: options.idleDisplay == .iconAndToday && engine.state == .idle ? engine.todayTotal() : 0,
+            blinkOn: Int(engine.now.timeIntervalSinceReferenceDate) % 2 == 0,
+            countdown: engine.countdown
+        )
+    }
+
+    /// The item's current width, kept as a minimum while the popover is open.
+    static func currentWidth(engine: TimerEngine, options: MenuBarOptions) -> CGFloat {
+        MenuBarLabelContent.render(content(engine: engine, options: options), fixedWidth: options.fixedWidth, colorScheme: .dark)
+            .size.width
     }
 }
 
@@ -32,27 +45,48 @@ struct MenuBarLabel: View {
 struct MenuBarLabelContent: View {
     let content: MenuBarContent
     let fixedWidth: Bool
+    /// Pads the image (centered) to at least this width.
+    var minimumWidth: CGFloat = 0
+    /// Reports the unpadded width after rendering.
+    var onRender: ((CGFloat) -> Void)?
 
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        Image(nsImage: rendered)
+        let image = Self.render(content, fixedWidth: fixedWidth, colorScheme: colorScheme)
+        if let onRender {
+            let width = image.size.width
+            // Report after this render pass; state can't change during one.
+            DispatchQueue.main.async { onRender(width) }
+        }
+        return Image(nsImage: Self.padded(image, toWidth: minimumWidth))
             .accessibilityLabel([content.text].compactMap { $0 }.joined())
     }
 
-    private var rendered: NSImage {
+    static func render(_ content: MenuBarContent, fixedWidth: Bool, colorScheme: ColorScheme) -> NSImage {
         // Without a color dot the image is a template, so the system tints it to match the
         // menu bar. With one, it must keep its colors, so the text ink follows the appearance.
         let isTemplate = content.colorHex == nil
         let ink: Color = isTemplate || colorScheme == .light ? .black : .white
-        let renderer = ImageRenderer(content: drawing(ink: ink))
+        let renderer = ImageRenderer(content: drawing(content, fixedWidth: fixedWidth, ink: ink))
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
         let image = renderer.nsImage ?? NSImage()
         image.isTemplate = isTemplate
         return image
     }
 
-    private func drawing(ink: Color) -> some View {
+    private static func padded(_ image: NSImage, toWidth width: CGFloat) -> NSImage {
+        guard width > image.size.width else { return image }
+        let size = NSSize(width: width, height: image.size.height)
+        let padded = NSImage(size: size, flipped: false) { _ in
+            image.draw(at: NSPoint(x: ((width - image.size.width) / 2).rounded(), y: 0), from: .zero, operation: .sourceOver, fraction: 1)
+            return true
+        }
+        padded.isTemplate = image.isTemplate
+        return padded
+    }
+
+    private static func drawing(_ content: MenuBarContent, fixedWidth: Bool, ink: Color) -> some View {
         HStack(spacing: 4) {
             if let colorHex = content.colorHex {
                 Circle()

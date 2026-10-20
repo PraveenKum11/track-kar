@@ -7,8 +7,9 @@ extension View {
     }
 
     /// A raised area: glass in the Glass style, an opaque card in the Solid style.
-    func themedSurface(cornerRadius: CGFloat = 10) -> some View {
-        modifier(ThemedSurface(cornerRadius: cornerRadius))
+    /// `tint` washes it lightly with a color, such as the running activity's.
+    func themedSurface(cornerRadius: CGFloat = 10, tint: Color? = nil) -> some View {
+        modifier(ThemedSurface(cornerRadius: cornerRadius, tint: tint))
     }
 
     func themedButton(prominent: Bool = false) -> some View {
@@ -70,17 +71,21 @@ private struct WindowAppearance: NSViewRepresentable {
 
 private struct ThemedSurface: ViewModifier {
     let cornerRadius: CGFloat
+    let tint: Color?
     @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         switch theme.style {
         case .glass:
-            content.glassEffect(.regular, in: shape)
+            content.glassEffect(tint.map { .regular.tint($0.opacity(0.18)) } ?? .regular, in: shape)
         case .solid:
             content
-                .background(theme.elevatedSurface, in: shape)
-                .overlay(shape.strokeBorder(theme.separator))
+                .background {
+                    shape.fill(theme.elevatedSurface)
+                    shape.fill((tint ?? .clear).opacity(0.12))
+                }
+                .overlay(shape.strokeBorder(tint?.opacity(0.35) ?? theme.separator))
         }
     }
 }

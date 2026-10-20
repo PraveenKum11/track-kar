@@ -6,6 +6,7 @@ struct TrackKarApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let container: ModelContainer
     @State private var engine: TimerEngine
+    @State private var widthLock = StatusItemWidthLock()
     @AppStorage(PreferenceKey.menuBarOptions) private var menuBarOptions = MenuBarOptions()
 
     init() {
@@ -31,10 +32,10 @@ struct TrackKarApp: App {
 
     var body: some Scene {
         MenuBarExtra(isInserted: isMenuBarItemShown) {
-            PopoverView()
+            PopoverView(widthLock: widthLock)
                 .environment(engine)
         } label: {
-            MenuBarLabel(engine: engine, options: menuBarOptions)
+            MenuBarLabel(engine: engine, options: menuBarOptions, widthLock: widthLock)
         }
         .menuBarExtraStyle(.window)
         .modelContainer(container)

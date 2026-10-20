@@ -348,6 +348,7 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 > - **Dimming.** Opacity is ignored in the menu bar, so the dimmed paused style is drawn as a reduced-alpha template image.
 > - **Switching guard.** Starting something else while a timer is running or paused never ends it silently. The user chooses: *Save and switch*, *Move this time* (re-label the running entry and keep it going), *Discard and switch*, or Cancel. This applies to the popover (name field and chips) and Activities → Start Timer.
 > - **Stable menu bar width.** The status item label is drawn as a single image so its digits are truly fixed-width. Otherwise the item resized as the time changed, and the popover, which is anchored to it, slid sideways.
+> - **Popover stays put.** While the popover is open, the status item doesn't shrink (for example when a timer stops) and the popover is pinned to the position it opened at. Before this, the system re-anchored the popover to the item's moved left edge whenever its height changed.
 
 ### Phase 3: Timer modes and Pomodoro
 - [x] Countdown timer:
@@ -367,10 +368,8 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 - [x] History shows the timer length or pomodoro count per entry.
 - [x] Schema additions (`targetReachedAt`, `pomodoroPhaseRaw`, `phaseStartedAt`, `completedFocusCount`) migrate automatically. This was verified on a snapshot of real data.
 
-### Phase 4: White noise
-- [ ] `NoiseGenerator` (white, pink and brown) on `AVAudioEngine`, with volume and fades.
-- [ ] Popover control and the auto-play with Pomodoro focus option.
-- [ ] (Optional) bundled ambient loops.
+### Phase 4: White noise (deferred)
+Postponed on 2026-10-20 and moved to the backlog. Phase 5 is next.
 
 ### Phase 5: Dashboard and insights
 - [ ] Range picker, totals and comparison with the previous period.
@@ -392,6 +391,7 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 - [ ] (Optional) Homebrew cask.
 
 ### Backlog / ideas (unprioritised)
+- White noise (was Phase 4): `NoiseGenerator` (white, pink and brown) on `AVAudioEngine`, with volume and fades, a popover control, auto-play during Pomodoro focus, and optional ambient loops.
 - Tags (billable, deep work, meeting) alongside activities.
 - Daily or weekly goals per activity, with progress rings.
 - Calendar integration: show tracked blocks next to calendar events (EventKit).
@@ -417,6 +417,7 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 | 2026-10-20 | The menu bar item is fully configurable from a **Settings → Menu Bar** page. |
 | 2026-10-20 | Groups are assigned **only in the full app**. The popover stays minimal. |
 | 2026-10-20 | **No Apple Intelligence features** for now. |
+| 2026-10-20 | **White noise is deferred** to the backlog. |
 | 2026-10-20 | The app supports **themes**: Light, Dark or System mode × **Liquid Glass** or **Solid** style, plus an accent color. All UI goes through a theme layer. |
 
 ---

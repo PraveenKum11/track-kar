@@ -2,12 +2,16 @@ import SwiftUI
 
 /// The menu bar popover: the minimal surface for starting, pausing and stopping.
 struct PopoverView: View {
+    /// Set for the menu bar popover, so the status item keeps its width while it's open.
+    var widthLock: StatusItemWidthLock?
+
     @Environment(TimerEngine.self) private var engine
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     @AppStorage(PreferenceKey.newActivityBehavior) private var newActivityBehavior: NewActivityBehavior = .ask
     @AppStorage(PreferenceKey.selectedTimerMode) private var selectedMode: TimerMode = .stopwatch
     @AppStorage(PreferenceKey.countdownMinutes) private var countdownMinutes = 25
+    @AppStorage(PreferenceKey.menuBarOptions) private var menuBarOptions = MenuBarOptions()
 
     @State private var name = ""
     @State private var pendingSwitch: StartTarget?
@@ -15,49 +19,32 @@ struct PopoverView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 8) {
-                NameField(
-                    text: $name,
-                    isFocused: $isNameFocused,
-                    placeholder: engine.state == .idle
-                        ? String(localized: "What are you working on?")
-                        : String(localized: "Switch to something else…"),
-                    onSubmit: submit
-                )
-                if engine.state == .idle {
-                    Button {
-                        start(StartTarget.title(name))
-                    } label: {
-                        Label("Start", systemImage: "play.fill")
-                            .labelStyle(.iconOnly)
-                    }
-                    .themedButton(prominent: true)
-                    .controlSize(.large)
-                    .help("Start (Return)")
-                }
-            }
+            if let entry = engine.activeEntry {
+                // While tracking, the timer leads and switching is secondary.
+                ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused && pendingSwitch == nil)
 
-            if engine.state == .idle {
+                if let target = pendingSwitch {
+                    SwitchConfirmation(current: entry, target: target) { choice in
+                        if let choice {
+                            engine.switchActiveEntry(
+                                to: target, choice: choice, kind: selectedKind, newActivityBehavior: newActivityBehavior
+                            )
+                        }
+                        pendingSwitch = nil
+                    }
+                } else if let prompt = engine.savePromptEntry {
+                    SavePromptBanner(title: prompt.title)
+                }
+
+                nameField
+            } else {
+                nameField
                 TimerModePicker(mode: $selectedMode, countdownMinutes: $countdownMinutes) {
                     AppActivation.showSettings(openSettings)
                 }
-            }
-
-            if let entry = engine.activeEntry {
-                ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused && pendingSwitch == nil)
-            }
-
-            if let target = pendingSwitch, let entry = engine.activeEntry {
-                SwitchConfirmation(current: entry, target: target) { choice in
-                    if let choice {
-                        engine.switchActiveEntry(
-                            to: target, choice: choice, kind: selectedKind, newActivityBehavior: newActivityBehavior
-                        )
-                    }
-                    pendingSwitch = nil
+                if let prompt = engine.savePromptEntry {
+                    SavePromptBanner(title: prompt.title)
                 }
-            } else if let entry = engine.savePromptEntry {
-                SavePromptBanner(title: entry.title)
             }
 
             RecentChips { start(.activity($0)) }
@@ -69,44 +56,71 @@ struct PopoverView: View {
         .padding(16)
         .frame(width: 320)
         .themedRoot()
+        .background {
+            if let widthLock {
+                PopoverPositionPin { isVisible in
+                    if isVisible {
+                        widthLock.popoverOpened(
+                            reserving: MenuBarLabel.currentWidth(engine: engine, options: menuBarOptions)
+                        )
+                    } else {
+                        widthLock.popoverClosed()
+                    }
+                }
+            }
+        }
         .onAppear {
             isNameFocused = engine.state == .idle
         }
+    }
+
+    private var nameField: some View {
+        let isIdle = engine.state == .idle
+        return NameField(
+            text: $name,
+            isFocused: $isNameFocused,
+            placeholder: isIdle
+                ? String(localized: "What are you working on?")
+                : String(localized: "Switch to something else…"),
+            systemImage: isIdle ? "square.and.pencil" : "arrow.left.arrow.right",
+            onStart: isIdle ? { start(StartTarget.title(name)) } : nil,
+            onSubmit: submit
+        )
     }
 
     private var footer: some View {
         let reference = engine.state == .running ? engine.now : .now
         let today = Calendar.current.dateInterval(of: .day, for: reference) ?? DateInterval(start: reference, duration: 0)
 
-        return HStack(spacing: 12) {
-            TodayTotalView(day: today, now: reference)
-            Spacer()
-            Button {
-                AppActivation.showMainWindow(openWindow)
-            } label: {
-                Label("Open Track Kar", systemImage: "macwindow")
-            }
-            .keyboardShortcut("o")
-            .help("Open Track Kar (⌘O)")
+        return TodaySummary(day: today, now: reference) {
+            HStack(spacing: 12) {
+                Button {
+                    AppActivation.showMainWindow(openWindow)
+                } label: {
+                    Label("Open Track Kar", systemImage: "macwindow")
+                }
+                .keyboardShortcut("o")
+                .help("Open Track Kar (⌘O)")
 
-            Button {
-                AppActivation.showSettings(openSettings)
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .keyboardShortcut(",")
-            .help("Settings (⌘,)")
+                Button {
+                    AppActivation.showSettings(openSettings)
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",")
+                .help("Settings (⌘,)")
 
-            Button {
-                NSApp.terminate(nil)
-            } label: {
-                Label("Quit Track Kar", systemImage: "power")
+                Button {
+                    NSApp.terminate(nil)
+                } label: {
+                    Label("Quit Track Kar", systemImage: "power")
+                }
+                .keyboardShortcut("q")
+                .help("Quit Track Kar (⌘Q)")
             }
-            .keyboardShortcut("q")
-            .help("Quit Track Kar (⌘Q)")
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderless)
     }
 
     private var selectedKind: TimerKind {
