@@ -9,6 +9,11 @@ enum SampleData {
         UserDefaults.standard.bool(forKey: "TrackKarSampleData")
     }
 
+    /// `-TrackKarStoreURL <path>` opens a specific store file, e.g. a copy for migration checks.
+    static var storeURL: URL? {
+        UserDefaults.standard.string(forKey: "TrackKarStoreURL").map { URL(fileURLWithPath: $0) }
+    }
+
     static func seed(_ context: ModelContext, now: Date = .now) {
         let calendar = Calendar.current
         let prep = ActivityGroup(name: "Interview prep", colorHex: ActivityPalette.slots[6].light)

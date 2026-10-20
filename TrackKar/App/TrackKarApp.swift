@@ -10,13 +10,23 @@ struct TrackKarApp: App {
 
     init() {
         #if DEBUG
-        let container = SampleData.isRequested ? Persistence.makeContainer(inMemory: true) : Persistence.makeContainer()
-        if SampleData.isRequested { SampleData.seed(container.mainContext) }
+        let container: ModelContainer
+        if let url = SampleData.storeURL {
+            container = Persistence.makeContainer(url: url)
+        } else if SampleData.isRequested {
+            container = Persistence.makeContainer(inMemory: true)
+            SampleData.seed(container.mainContext)
+        } else {
+            container = Persistence.makeContainer()
+        }
+        // Sample runs never ask for notification permission on the user's behalf.
+        let notifier: TimerNotifying = SampleData.isRequested ? SilentNotifier() : SystemNotifier()
         #else
         let container = Persistence.makeContainer()
+        let notifier: TimerNotifying = SystemNotifier()
         #endif
         self.container = container
-        _engine = State(initialValue: TimerEngine(context: container.mainContext))
+        _engine = State(initialValue: TimerEngine(context: container.mainContext, notifier: notifier))
     }
 
     var body: some Scene {
@@ -40,6 +50,7 @@ struct TrackKarApp: App {
 
         Settings {
             SettingsView()
+                .environment(engine)
         }
     }
 

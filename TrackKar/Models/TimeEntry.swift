@@ -1,8 +1,47 @@
 import Foundation
 import SwiftData
 
-enum TimerMode: String, Codable {
+enum TimerMode: String, Codable, CaseIterable, Identifiable {
     case stopwatch, timer, pomodoro
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .stopwatch: String(localized: "Stopwatch")
+        case .timer: String(localized: "Timer")
+        case .pomodoro: String(localized: "Pomodoro")
+        }
+    }
+}
+
+nonisolated enum PomodoroPhase: String, Codable {
+    case focus, shortBreak, longBreak
+
+    var isBreak: Bool { self != .focus }
+
+    var breakKind: BreakKind? {
+        switch self {
+        case .focus: nil
+        case .shortBreak: .shortBreak
+        case .longBreak: .longBreak
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .focus: String(localized: "Focus")
+        case .shortBreak: String(localized: "Short break")
+        case .longBreak: String(localized: "Long break")
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .focus: "brain"
+        case .shortBreak, .longBreak: "cup.and.saucer.fill"
+        }
+    }
 }
 
 /// One tracked session, from start to stop. Its duration is the sum of its segments; breaks never count.
@@ -19,6 +58,15 @@ final class TimeEntry {
     var createdAt: Date = Date.now
     /// `nil` while the entry is active (running or paused).
     var endedAt: Date?
+
+    // Countdown timer: when the target was reached (it may keep counting as overtime).
+    var targetReachedAt: Date?
+
+    // Pomodoro state, stored so a session survives quit and relaunch.
+    var pomodoroPhaseRaw: String?
+    /// When the current phase began; `nil` while waiting for the user to start it.
+    var phaseStartedAt: Date?
+    var completedFocusCount: Int = 0
 
     @Relationship(deleteRule: .cascade, inverse: \Segment.entry)
     var segments: [Segment]? = []
@@ -44,6 +92,19 @@ final class TimeEntry {
     }
 
     var colorHex: String? { activity?.colorHex }
+
+    var pomodoroPhase: PomodoroPhase? {
+        get { pomodoroPhaseRaw.flatMap(PomodoroPhase.init(rawValue:)) }
+        set { pomodoroPhaseRaw = newValue?.rawValue }
+    }
+
+    /// Closed segment time that started at or after `date`, e.g. focus done earlier in this phase.
+    func closedSegmentTime(since date: Date) -> TimeInterval {
+        (segments ?? []).reduce(0) { total, segment in
+            guard segment.start >= date, let end = segment.end else { return total }
+            return total + end.timeIntervalSince(segment.start)
+        }
+    }
 
     var isActive: Bool { endedAt == nil }
     var openSegment: Segment? { segments?.first { $0.end == nil } }

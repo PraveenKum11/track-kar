@@ -71,6 +71,10 @@ struct MenuBarOptions: Equatable {
     var icon: MenuBarIcon = .timer
     /// Keeps neighbouring menu bar items from shifting as digits change.
     var fixedWidth = true
+    /// For countdowns and Pomodoro: show time left rather than time tracked.
+    var countdownShowsRemaining = true
+    /// Show a focus or break icon during Pomodoro.
+    var showPhaseIcon = true
 }
 
 // Explicit coding so options added later decode with their defaults, and so
@@ -79,6 +83,7 @@ extension MenuBarOptions: Codable {
     private enum CodingKeys: String, CodingKey {
         case showIcon, showTime, showName, nameLength, showColorDot
         case timeFormat, idleDisplay, pausedStyle, icon, fixedWidth
+        case countdownShowsRemaining, showPhaseIcon
     }
 
     init(from decoder: Decoder) throws {
@@ -94,6 +99,8 @@ extension MenuBarOptions: Codable {
         pausedStyle = (try? container.decodeIfPresent(MenuBarPausedStyle.self, forKey: .pausedStyle)) ?? defaults.pausedStyle
         icon = (try? container.decodeIfPresent(MenuBarIcon.self, forKey: .icon)) ?? defaults.icon
         fixedWidth = try container.decodeIfPresent(Bool.self, forKey: .fixedWidth) ?? defaults.fixedWidth
+        countdownShowsRemaining = try container.decodeIfPresent(Bool.self, forKey: .countdownShowsRemaining) ?? defaults.countdownShowsRemaining
+        showPhaseIcon = try container.decodeIfPresent(Bool.self, forKey: .showPhaseIcon) ?? defaults.showPhaseIcon
     }
 
     func encode(to encoder: Encoder) throws {
@@ -108,6 +115,8 @@ extension MenuBarOptions: Codable {
         try container.encode(pausedStyle, forKey: .pausedStyle)
         try container.encode(icon, forKey: .icon)
         try container.encode(fixedWidth, forKey: .fixedWidth)
+        try container.encode(countdownShowsRemaining, forKey: .countdownShowsRemaining)
+        try container.encode(showPhaseIcon, forKey: .showPhaseIcon)
     }
 }
 
@@ -142,9 +151,16 @@ struct MenuBarContent: Equatable {
         activityName: String?,
         colorHex: String?,
         todayTotal: TimeInterval,
-        blinkOn: Bool
+        blinkOn: Bool,
+        countdown: CountdownStatus? = nil
     ) -> MenuBarContent {
-        let symbol = options.icon.symbolName
+        var symbol = options.icon.symbolName
+        if options.showPhaseIcon, let phase = countdown?.phase {
+            symbol = phase.symbolName
+        }
+        // A Pomodoro break, or a phase waiting to start, isn't a manual pause.
+        let isWaiting = countdown?.isWaiting == true
+        let isPaused = state == .paused && countdown?.phase?.isBreak != true && !isWaiting
 
         guard state != .idle else {
             switch options.idleDisplay {
@@ -160,30 +176,41 @@ struct MenuBarContent: Equatable {
             parts.append(truncate(activityName, to: options.nameLength))
         }
         var showTime = options.showTime
-        if state == .paused, options.pausedStyle == .blink, !blinkOn {
+        if isPaused, options.pausedStyle == .blink, !blinkOn {
             showTime = false
         }
         if showTime {
-            parts.append(options.timeFormat.format(elapsed))
+            parts.append(timeText(options: options, elapsed: elapsed, countdown: countdown))
         }
 
         var content = MenuBarContent()
         content.text = parts.isEmpty ? nil : parts.joined(separator: " ")
         // A status item label renders a single image, so the pause glyph, color dot and icon
         // take that slot in that order of precedence.
-        if state == .paused, options.pausedStyle == .pauseGlyph {
+        if isPaused, options.pausedStyle == .pauseGlyph {
             content.symbolName = "pause.circle"
         } else if options.showColorDot, let colorHex {
             content.colorHex = colorHex
         } else if options.showIcon {
             content.symbolName = symbol
         }
-        content.isDimmed = state == .paused && options.pausedStyle == .dim
+        content.isDimmed = (isPaused && options.pausedStyle == .dim) || isWaiting
         // Never leave an empty status item; keep the blinking time's space by falling back to the icon.
         if content.symbolName == nil, content.colorHex == nil, content.text == nil {
             content.symbolName = symbol
         }
         return content
+    }
+
+    private static func timeText(options: MenuBarOptions, elapsed: TimeInterval, countdown: CountdownStatus?) -> String {
+        guard let countdown, options.countdownShowsRemaining else {
+            return options.timeFormat.format(elapsed)
+        }
+        if countdown.isOvertime {
+            return "+" + options.timeFormat.format(-countdown.remaining)
+        }
+        // Round up so a countdown reads 0:00:00 only when it's actually done.
+        return options.timeFormat.format(countdown.remaining.rounded(.up))
     }
 
     private static func truncate(_ name: String, to length: Int) -> String {

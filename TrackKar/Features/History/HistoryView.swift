@@ -156,6 +156,15 @@ struct EntryRow: View {
                 }
                 HStack(spacing: 4) {
                     Text(timeRange)
+                    switch entry.mode {
+                    case .pomodoro:
+                        Label("^[\(entry.completedFocusCount) pomodoro](inflect: true)", systemImage: "brain")
+                            .labelStyle(.titleAndIcon)
+                    case .timer:
+                        Label("\(DurationFormat.short(entry.targetDuration ?? 0)) timer", systemImage: "timer")
+                    case .stopwatch:
+                        EmptyView()
+                    }
                     if entry.breakCount > 0 {
                         Text("· ^[\(entry.breakCount) break](inflect: true)")
                     }

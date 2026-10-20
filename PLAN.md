@@ -350,9 +350,22 @@ The cost is that people on macOS 14 or 15 can't run it if it's published. For a 
 > - **Stable menu bar width.** The status item label is drawn as a single image so its digits are truly fixed-width. Otherwise the item resized as the time changed, and the popover, which is anchored to it, slid sideways.
 
 ### Phase 3: Timer modes and Pomodoro
-- [ ] Countdown timer with presets, a notification and sound, and an overtime option.
-- [ ] Pomodoro state machine with its settings page, phase notifications, auto-start and skip.
-- [ ] Mode switch in the popover, and a Pomodoro indicator in the menu bar.
+- [x] Countdown timer:
+  - presets (5, 15, 25, 50 min) and a custom length.
+  - stops exactly at the target, even if it's noticed late, or keeps counting as overtime (a setting).
+  - pauses don't count.
+- [x] Pomodoro:
+  - phase state is stored on the entry, so it survives quit and relaunch. Only focus time is tracked, and breaks are recorded as Break records.
+  - auto-start breaks (on by default) and focus (off by default), skip, and start-when-ready.
+  - a long break after every N focus sessions.
+  - if the Mac slept through a phase end, the next phase waits instead of auto-starting, so no time is invented.
+- [x] Notifications at the exact end time through `UNUserNotificationCenter`, with sound, even when the app is suspended. If notifications are off, an in-app sound plays instead.
+- [x] Mode switch in the popover (Stopwatch · Timer · Pomodoro).
+- [x] Countdown display (time left, overtime as `+0:01:23`, a progress bar) in the popover, the main-window toolbar and the menu bar.
+- [x] Menu bar focus and break icons, and dimming while a phase waits.
+- [x] Settings → Timers (countdown end behavior, Pomodoro lengths and cycles, auto-start, notification status) and new Menu Bar options for countdowns.
+- [x] History shows the timer length or pomodoro count per entry.
+- [x] Schema additions (`targetReachedAt`, `pomodoroPhaseRaw`, `phaseStartedAt`, `completedFocusCount`) migrate automatically. This was verified on a snapshot of real data.
 
 ### Phase 4: White noise
 - [ ] `NoiseGenerator` (white, pink and brown) on `AVAudioEngine`, with volume and fades.

@@ -12,11 +12,14 @@ enum Persistence {
 
     /// Tests host the app, so the app itself also uses an in-memory store under test to keep real data untouched.
     static func makeContainer(inMemory: Bool = isRunningTests) -> ModelContainer {
-        let configuration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: inMemory,
-            cloudKitDatabase: .none
-        )
+        open(ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory, cloudKitDatabase: .none))
+    }
+
+    static func makeContainer(url: URL) -> ModelContainer {
+        open(ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
+    }
+
+    private static func open(_ configuration: ModelConfiguration) -> ModelContainer {
         do {
             return try ModelContainer(for: schema, configurations: configuration)
         } catch {

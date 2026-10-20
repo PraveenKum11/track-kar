@@ -7,6 +7,9 @@ struct SettingsView: View {
             Tab("General", systemImage: "gearshape") {
                 GeneralSettingsView()
             }
+            Tab("Timers", systemImage: "timer") {
+                TimerSettingsView()
+            }
             Tab("Menu Bar", systemImage: "menubar.rectangle") {
                 MenuBarSettingsView()
             }

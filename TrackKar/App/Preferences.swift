@@ -10,6 +10,9 @@ enum PreferenceKey {
     static let menuBarOptions = "menuBarOptions"
     static let activitiesLayout = "activitiesLayout"
     static let showArchivedActivities = "showArchivedActivities"
+    static let timerSettings = "timerSettings"
+    static let selectedTimerMode = "selectedTimerMode"
+    static let countdownMinutes = "countdownMinutes"
 }
 
 /// What happens when a timer starts with a name that isn't a saved activity yet.

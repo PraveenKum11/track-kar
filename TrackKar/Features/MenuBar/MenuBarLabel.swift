@@ -15,7 +15,8 @@ struct MenuBarLabel: View {
                 activityName: entry?.displayName,
                 colorHex: entry?.colorHex,
                 todayTotal: options.idleDisplay == .iconAndToday && engine.state == .idle ? engine.todayTotal() : 0,
-                blinkOn: Int(engine.now.timeIntervalSinceReferenceDate) % 2 == 0
+                blinkOn: Int(engine.now.timeIntervalSinceReferenceDate) % 2 == 0,
+                countdown: engine.countdown
             ),
             fixedWidth: options.fixedWidth
         )

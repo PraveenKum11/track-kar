@@ -142,7 +142,7 @@ private struct TrackingToolbarControl: View {
                 Text(entry.displayName)
                     .lineLimit(1)
                     .frame(maxWidth: 180)
-                Text(DurationFormat.clock(engine.elapsed))
+                Text(toolbarTime)
                     .monospacedDigit()
                     .foregroundStyle(engine.state == .paused ? .secondary : .primary)
                 Button {
@@ -171,5 +171,13 @@ private struct TrackingToolbarControl: View {
         .popover(isPresented: $isShowingPopover, arrowEdge: .bottom) {
             PopoverView()
         }
+    }
+
+    /// Time left for countdowns and Pomodoro phases, time tracked otherwise.
+    private var toolbarTime: String {
+        guard let countdown = engine.countdown else { return DurationFormat.clock(engine.elapsed) }
+        if countdown.isOvertime { return "+" + DurationFormat.clock(-countdown.remaining) }
+        let remaining = DurationFormat.clock(countdown.remaining.rounded(.up))
+        return countdown.phase.map { "\($0.label) \(remaining)" } ?? remaining
     }
 }

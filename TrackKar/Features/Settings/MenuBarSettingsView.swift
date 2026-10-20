@@ -3,16 +3,21 @@ import SwiftUI
 /// Settings → Menu Bar: what the status item shows, with a live preview.
 struct MenuBarSettingsView: View {
     @AppStorage(PreferenceKey.menuBarOptions) private var options = MenuBarOptions()
-    @State private var previewState: TrackingState = .running
+    @State private var previewState: PreviewState = .running
+
+    private enum PreviewState: Hashable {
+        case running, paused, idle, pomodoroBreak
+    }
 
     var body: some View {
         Form {
             Section {
                 preview
                 Picker("Preview", selection: $previewState) {
-                    Text("Running").tag(TrackingState.running)
-                    Text("Paused").tag(TrackingState.paused)
-                    Text("Idle").tag(TrackingState.idle)
+                    Text("Running").tag(PreviewState.running)
+                    Text("Paused").tag(PreviewState.paused)
+                    Text("Idle").tag(PreviewState.idle)
+                    Text("Break").tag(PreviewState.pomodoroBreak)
                 }
                 .pickerStyle(.segmented)
             }
@@ -32,6 +37,11 @@ struct MenuBarSettingsView: View {
                     ForEach(MenuBarTimeFormat.allCases) { Text($0.label).tag($0) }
                 }
                 Toggle("Fixed-width digits", isOn: $options.fixedWidth)
+            }
+
+            Section("Timer and Pomodoro") {
+                Toggle("Show time remaining instead of time tracked", isOn: $options.countdownShowsRemaining)
+                Toggle("Show a focus or break icon during Pomodoro", isOn: $options.showPhaseIcon)
             }
 
             Section("While paused") {
@@ -72,14 +82,22 @@ struct MenuBarSettingsView: View {
     }
 
     private var preview: some View {
+        let state: TrackingState = switch previewState {
+        case .running: .running
+        case .paused, .pomodoroBreak: .paused
+        case .idle: .idle
+        }
         let content = MenuBarContent.make(
             options: options,
-            state: previewState,
+            state: state,
             elapsed: 5_045,
             activityName: "Interview prep",
             colorHex: ActivityPalette.slots[0].light,
             todayTotal: 13_379,
-            blinkOn: true
+            blinkOn: true,
+            countdown: previewState == .pomodoroBreak
+                ? CountdownStatus(total: 300, remaining: 222, phase: .shortBreak, completedFocus: 1)
+                : nil
         )
         return HStack(spacing: 14) {
             Spacer()

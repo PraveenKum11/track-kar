@@ -6,6 +6,8 @@ struct PopoverView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     @AppStorage(PreferenceKey.newActivityBehavior) private var newActivityBehavior: NewActivityBehavior = .ask
+    @AppStorage(PreferenceKey.selectedTimerMode) private var selectedMode: TimerMode = .stopwatch
+    @AppStorage(PreferenceKey.countdownMinutes) private var countdownMinutes = 25
 
     @State private var name = ""
     @State private var pendingSwitch: StartTarget?
@@ -35,6 +37,12 @@ struct PopoverView: View {
                 }
             }
 
+            if engine.state == .idle {
+                TimerModePicker(mode: $selectedMode, countdownMinutes: $countdownMinutes) {
+                    AppActivation.showSettings(openSettings)
+                }
+            }
+
             if let entry = engine.activeEntry {
                 ActiveTimerView(entry: entry, allowsSpaceShortcut: !isNameFocused && pendingSwitch == nil)
             }
@@ -42,7 +50,9 @@ struct PopoverView: View {
             if let target = pendingSwitch, let entry = engine.activeEntry {
                 SwitchConfirmation(current: entry, target: target) { choice in
                     if let choice {
-                        engine.switchActiveEntry(to: target, choice: choice, newActivityBehavior: newActivityBehavior)
+                        engine.switchActiveEntry(
+                            to: target, choice: choice, kind: selectedKind, newActivityBehavior: newActivityBehavior
+                        )
                     }
                     pendingSwitch = nil
                 }
@@ -99,6 +109,14 @@ struct PopoverView: View {
         .buttonStyle(.borderless)
     }
 
+    private var selectedKind: TimerKind {
+        switch selectedMode {
+        case .stopwatch: .stopwatch
+        case .timer: .countdown(TimeInterval(countdownMinutes * 60))
+        case .pomodoro: .pomodoro
+        }
+    }
+
     private func submit(_ submission: NameField.Submission) {
         let target: StartTarget = switch submission {
         case .activity(let activity): .activity(activity)
@@ -110,7 +128,7 @@ struct PopoverView: View {
     /// Starts right away when idle; otherwise asks what to do with the running entry.
     private func start(_ target: StartTarget) {
         if engine.state == .idle {
-            engine.start(target, newActivityBehavior: newActivityBehavior)
+            engine.start(target, kind: selectedKind, newActivityBehavior: newActivityBehavior)
         } else if case .title(let title) = target, title.nilIfBlank == nil {
             // Return in an empty field while tracking does nothing.
         } else if engine.needsSwitchConfirmation(for: target) {
